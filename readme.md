@@ -1,0 +1,11 @@
+**Pixie** is an intelligent, omnichannel AI sales agent and automated chatbot engineered to handle the entire customer lifecycle—from initial discovery to service fulfillment—for digital agencies. Operating directly inside WhatsApp, Facebook Messenger, and Instagram, Pixie functions as an autonomous, conversational sales representative that captures leads, qualifies prospects, answers complex inquiries, and sells high-ticket services like custom websites, branding, SEO audits, paid ad campaigns, and custom software.
+
+Unlike traditional rule-based chatbots, Pixie leverages advanced Large Language Models (LLMs) to engage users in fluid, natural conversations, dynamically steering the flow via custom state machines.
+
+### Core Capabilities
+
+* **Autonomous Discovery & Sales:** Guided by a structured state machine, Pixie conducts human-like consultation sessions. It determines client requirements, dynamically fetches pricing using in-process administrative settings, and handles intent variations, context switching, and "go back" requests seamlessly.
+* **On-Demand Website Generation:** During a conversation, Pixie can automatically gather a prospect’s design preferences, process their industry vertically via keyword arrays (e.g., HVAC, Real Estate, Salon), interface with generation microservices, and deliver a fully localized, responsive website preview.
+* **Integrated E-Commerce & Provisioning:** Pixie generates real-time Stripe Checkout links directly inside the chat window. Once payment is completed, the system coordinates downstream background infrastructure to register live domains via Namecheap, configure DNS settings, remove preview watermarks, and send transactional receipts.
+* **Smart Re-engagement Engines:** To prevent drop-offs, Pixie tracks conversational checkpoints and triggers background jobs (such as offering an automated 20% discount after 22 hours on abandoned website drafts, sending day-30 upsell offers, or delivering 24-hour SEO evaluation reminders).
+* **Agent Safety & Traceability:** Pixie is engineered with an industrial inbound pipeline containing strict message-buffering to merge user text bursts, LRU-driven deduplication windows to drop repetitive webhook triggers, and explicit human-takeover overrides for complex customer service mitigation.
