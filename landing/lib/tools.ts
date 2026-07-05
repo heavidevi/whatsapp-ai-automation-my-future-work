@@ -1,0 +1,3751 @@
+export interface ToolFaq {
+  q: string;
+  a: string;
+}
+
+export interface ToolDefinition {
+  slug: string;
+  title: string;
+  h1: string;
+  shortName: string;
+  tagline: string;
+  metaDescription: string;
+  keywords: string[];
+  category: 'Generator' | 'Calculator' | 'Converter';
+  emoji: string;
+  image: string;
+  imageAlt: string;
+  primaryKeyword: string;
+  intro: string;
+  howItWorks: { title: string; description: string }[];
+  faqs: ToolFaq[];
+  relatedSlugs: string[];
+  ctaHook: string;
+  aboutHeading: string;
+  about: string;
+}
+
+export const TOOLS: ToolDefinition[] = [
+  {
+    slug: 'trust-badge-generator',
+    title: 'Free Trust Badge Generator for Online Stores',
+    h1: 'Trust Badge Generator',
+    shortName: 'Trust Badge Generator',
+    tagline: 'Generate trust badges for your online store in seconds.',
+    metaDescription:
+      'Create guarantee, secure-checkout, and free-shipping trust badges for your store in seconds. Free trust badge generator — export PNG or SVG, no signup.',
+    keywords: [
+      'trust badge generator',
+      'ecommerce trust badges',
+      'secure checkout badge',
+      'money back guarantee badge',
+      'free trust seal generator',
+    ],
+    category: 'Generator',
+    emoji: '🛡️',
+    image: '/tools/trust-badge-generator.jpg',
+    imageAlt: 'Laptop displaying a secure ecommerce checkout with trust signals',
+    primaryKeyword: 'trust badge generator',
+    intro:
+      'Turn any guarantee, return policy, or security claim into a polished badge for your product pages and checkout. Pick a style, write the promise (or let AI write it for you), and download a PNG or SVG ready to drop into Shopify, WooCommerce, or any landing page.',
+    howItWorks: [
+      {
+        title: 'Describe the promise',
+        description: 'Type the guarantee you want to display — "30-day money back", "Secure SSL checkout", "Free shipping over $50". AI suggests sharper copy variants.',
+      },
+      {
+        title: 'Pick a style',
+        description: 'Choose from circle, shield, or ribbon shapes. Pick brand colors that match your site.',
+      },
+      {
+        title: 'Download and paste',
+        description: 'Export as PNG or SVG. Drop it on your product page, checkout, or footer. No code needed.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is a trust badge and why do I need one?',
+        a: 'A trust badge is a small visual seal that signals safety, guarantees, or credibility to shoppers — like "Secure Checkout", "Money Back Guarantee", or "Free Shipping". Stores that display relevant trust badges near the buy button typically see conversion rate lifts of 10–30%.',
+      },
+      {
+        q: 'Where should I place trust badges on my store?',
+        a: 'Place them next to the "Add to Cart" or "Checkout" button (the highest-anxiety moments), in the footer for site-wide reassurance, and below long product descriptions. Avoid cluttering the hero — too many badges read as desperate.',
+      },
+      {
+        q: 'Are these badges free for commercial use?',
+        a: 'Yes. Badges generated here are 100% free for personal and commercial use on your own store. We do not watermark or require attribution.',
+      },
+      {
+        q: 'What file formats can I download?',
+        a: 'PNG (transparent background) and SVG (scalable vector). SVG is recommended for retina displays and easy color edits in your CSS.',
+      },
+      {
+        q: 'Can I add my own custom text?',
+        a: 'Yes. You control every word. Use the AI suggestion button if you want sharper, more conversion-focused copy variants.',
+      },
+    ],
+    relatedSlugs: ['ambigram-generator', 'superscript-generator'],
+    ctaHook: 'Want a full ecommerce site with trust badges, checkout, and SEO already wired in? Text Pixie on WhatsApp — your store ships in 60 seconds.',
+    aboutHeading: 'Why trust badges actually move conversion',
+    about:
+      'Trust badges work because checkout is the moment of highest buyer anxiety. A study by the Baymard Institute found that 18% of US shoppers abandon carts because they "don\'t trust the site with credit card info". A visible "Secure SSL Checkout" badge directly addresses that anxiety. Money-back guarantees reduce purchase risk, free-shipping badges remove the surprise-fee objection, and warranty badges signal quality. The key is relevance — a "GDPR compliant" badge means nothing to a US shopper on a $20 t-shirt page, but a "30-day returns" badge does. Pick the two or three badges that match the actual fears your buyer has at the moment they\'re about to click pay.',
+  },
+  {
+    slug: 'ambigram-generator',
+    title: 'Ambigram Generator — Words That Read Upside Down',
+    h1: 'Ambigram Generator',
+    shortName: 'Ambigram Generator',
+    tagline: 'Create ambigram designs that read the same upside down.',
+    metaDescription:
+      'Type any word and get an ambigram that reads the same upside down. Free ambigram generator for tattoos, logos, and designs — no signup needed.',
+    keywords: [
+      'ambigram generator',
+      'ambigram maker',
+      'free ambigram',
+      'tattoo ambigram',
+      'rotational ambigram',
+    ],
+    category: 'Generator',
+    emoji: '🔄',
+    image: '/tools/ambigram-generator.jpg',
+    imageAlt: 'Hand-lettered calligraphy and typography artwork',
+    primaryKeyword: 'ambigram generator',
+    intro:
+      'Type a word — see it rendered as an ambigram that reads identically when you rotate it 180°. Perfect for tattoos, logos, jewelry engravings, and band names. AI suggests font pairings and word combinations that ambigram cleanly.',
+    howItWorks: [
+      {
+        title: 'Enter a word or two',
+        description: 'Single words work for rotational ambigrams. Two words work for mirror ambigrams where each reads the other when flipped.',
+      },
+      {
+        title: 'Pick a style',
+        description: 'Choose from gothic, script, modern, or tribal lettering. AI ranks which style fits your word best.',
+      },
+      {
+        title: 'Download or share',
+        description: 'Export as PNG with transparent background. Use for tattoos, logos, social posts, or print.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is an ambigram?',
+        a: 'An ambigram is a word or design that reads the same (or as a different word) when rotated, flipped, or mirrored. The most common style is the rotational ambigram, where the word reads identically when turned upside down — famously used by the band Boston and the novel Angels & Demons.',
+      },
+      {
+        q: 'Which words make the best ambigrams?',
+        a: 'Words with symmetrical letter structures work best — letters like O, X, S, H, N, I, and Z. Short words (5–8 letters) are easier to design. Names like "Anna" or "Otto" are natural fits; longer asymmetric words like "Mountain" need more creative letterforms.',
+      },
+      {
+        q: 'Can I use these ambigrams for tattoos?',
+        a: 'Yes. Export at maximum size, take the PNG to your tattoo artist, and they can use it as the stencil reference. Many of our users build ambigram tattoos from names, dates, or meaningful phrases.',
+      },
+      {
+        q: 'Is this free for commercial use?',
+        a: 'Yes. Generated ambigrams are free for personal and commercial use including logos, merch, and prints. No attribution required.',
+      },
+      {
+        q: 'Why do some words not look symmetric?',
+        a: 'Not every word has natural ambigram potential. The generator picks the closest visually balanced design, but words with rare letter combinations (like multiple Qs or Ws) require creative letter merging that won\'t be perfectly symmetric.',
+      },
+    ],
+    relatedSlugs: ['trust-badge-generator', 'superscript-generator'],
+    ctaHook: 'Need a full logo or brand identity, not just an ambigram? Text Pixie on WhatsApp — logos, websites, and ads delivered to your phone.',
+    aboutHeading: 'The history of ambigram design',
+    about:
+      'Ambigrams have roots stretching back to medieval calligraphy, but the term was coined by cognitive scientist Douglas Hofstadter in 1983. The art form gained mainstream attention through Scott Kim\'s lettering work in the 1980s and later through Dan Brown\'s 2000 novel Angels & Demons, which featured ambigrams created by typographer John Langdon. Today ambigrams are used in tattoo art, logo design, wedding signage, and jewelry. The hardest letters to ambigram are k, m, q, w, and y because their structures resist 180° rotation; designers usually merge them into adjacent letterforms or substitute creative ligatures. The cleanest ambigrams use letters that already rotate symmetrically: o, x, s, z, n, h, and i.',
+  },
+  {
+    slug: 'superscript-generator',
+    title: 'Superscript Generator — Copy Raised Text Free',
+    h1: 'Superscript Generator',
+    shortName: 'Superscript Generator',
+    tagline: 'Convert any text to superscript characters instantly.',
+    metaDescription:
+      'Turn any text into superscript and copy raised characters anywhere — exponents, footnotes, or bios. Free superscript generator, no signup needed.',
+    keywords: [
+      'superscript generator',
+      'superscript text',
+      'small text generator',
+      'tiny text generator',
+      'superscript copy paste',
+    ],
+    category: 'Converter',
+    emoji: '²',
+    image: '/tools/superscript-generator.jpg',
+    imageAlt: 'Close-up of a keyboard with vintage typography characters',
+    primaryKeyword: 'superscript generator',
+    intro:
+      'Type any text and instantly convert it to superscript characters you can copy and paste anywhere — Instagram bios, TikTok captions, Twitter, YouTube comments, Google Docs, Word, even math equations. Uses real Unicode characters so it works in places that block formatting.',
+    howItWorks: [
+      {
+        title: 'Type your text',
+        description: 'Letters, numbers, math symbols — anything you want raised above the baseline.',
+      },
+      {
+        title: 'Auto-convert in real time',
+        description: 'See the superscript version appear instantly. No button to click.',
+      },
+      {
+        title: 'Copy and paste anywhere',
+        description: 'Works on every platform because it uses real Unicode characters, not CSS formatting that strips on paste.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is superscript text?',
+        a: 'Superscript text is small text raised above the normal baseline — used for exponents (x²), footnote markers, abbreviations like 1ˢᵗ, and stylized social media captions. It uses real Unicode characters, so it survives copy-paste across apps that don\'t support rich formatting.',
+      },
+      {
+        q: 'Can I use superscript on Instagram and TikTok?',
+        a: 'Yes. Because our generator outputs real Unicode characters, you can paste superscript directly into Instagram bios, captions, comments, TikTok descriptions, and DMs. It works in places where bold/italic don\'t.',
+      },
+      {
+        q: 'Why are some letters missing in superscript?',
+        a: 'Unicode does not include superscript versions of every letter. The letters q, X (capital), and a few others are missing. When you type a missing character, the generator falls back to the closest visual match or keeps the original character.',
+      },
+      {
+        q: 'How is this different from formatting in Word or Google Docs?',
+        a: 'Word and Google Docs apply CSS-style formatting that disappears when you copy text to plain-text fields. Our generator uses Unicode characters that survive any paste, including into plain text editors, social bios, and code.',
+      },
+      {
+        q: 'Is this safe and free?',
+        a: 'Yes. All conversion happens in your browser — your text never touches our server. No tracking, no signup, completely free.',
+      },
+    ],
+    relatedSlugs: ['subscript-generator', 'ambigram-generator'],
+    ctaHook: 'Need fancy text for a product page or ad creative? Pixie builds entire ad campaigns from a single WhatsApp message.',
+    aboutHeading: 'Where superscript Unicode actually works',
+    about:
+      'Superscript Unicode characters are part of the broader "Mathematical Alphanumeric Symbols" and "Latin Superscript" blocks defined by the Unicode Consortium. They were originally added for scientific notation — exponents, isotope numbers (¹²C), and footnote markers — but social media culture has adopted them for stylized captions because they survive copy-paste between apps. The characters render natively in nearly every modern font, including system fonts on iOS, Android, Windows, and macOS. The main exception is that capital Q has no Unicode superscript equivalent, so generators typically fall back to a lowercase ᵠ or leave the original Q. Use superscript sparingly — it harms screen-reader accessibility, so don\'t use it for the main copy of headers or buttons.',
+  },
+  {
+    slug: 'subscript-generator',
+    title: 'Subscript Generator — Copy Lowered Text Free',
+    h1: 'Subscript Generator',
+    shortName: 'Subscript Generator',
+    tagline: 'Convert any text to subscript characters instantly.',
+    metaDescription:
+      'Convert text to subscript and copy small lowered characters anywhere — formulas, footnotes, or chats. Free subscript generator, no signup needed.',
+    keywords: [
+      'subscript generator',
+      'subscript text',
+      'chemical formula text',
+      'H2O subscript',
+      'subscript copy paste',
+    ],
+    category: 'Converter',
+    emoji: '₂',
+    image: '/tools/subscript-generator.jpg',
+    imageAlt: 'Chemistry beakers and laboratory equipment',
+    primaryKeyword: 'subscript generator',
+    intro:
+      'Type any text and convert it to subscript characters you can copy-paste into chemical formulas (H₂O, CO₂), math equations, social media captions, or documents. Uses Unicode characters that work everywhere — even places that strip formatting.',
+    howItWorks: [
+      {
+        title: 'Type your text',
+        description: 'Letters, numbers, symbols — anything you want positioned below the baseline.',
+      },
+      {
+        title: 'Auto-convert',
+        description: 'See the subscript version appear in real time as you type.',
+      },
+      {
+        title: 'Copy anywhere',
+        description: 'Paste into chemistry homework, scientific papers, Instagram captions, or chat messages.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is subscript text?',
+        a: 'Subscript text is small text positioned below the normal baseline. It\'s used for chemical formulas (H₂O, CO₂), mathematical notation (variables with index like x₁, x₂), and occasional stylistic formatting in social media.',
+      },
+      {
+        q: 'Why use a Unicode subscript instead of Word\'s subscript button?',
+        a: 'Word formatting strips when you paste into plain-text fields like Instagram bios, Slack, or browser forms. Unicode subscript characters survive any paste because they are actual characters, not formatting.',
+      },
+      {
+        q: 'Are all letters available as subscript?',
+        a: 'No. Unicode includes subscript versions of most lowercase letters and digits, but a few — like b, c, d, f, g, q, w, y, z — have no official subscript glyph. The generator falls back to the closest match or keeps the original.',
+      },
+      {
+        q: 'Can I use this for chemistry homework?',
+        a: 'Yes. Type "H2O" or "C6H12O6" and copy the subscript version into your document. It renders correctly in Google Docs, Word, Notion, and most LMS platforms.',
+      },
+      {
+        q: 'Does this work on mobile?',
+        a: 'Yes. The generator works in any modern mobile browser. Tap to copy and paste into any app on iOS or Android.',
+      },
+    ],
+    relatedSlugs: ['superscript-generator', 'ap-chem-score-calculator'],
+    ctaHook: 'Building a science tutor site or chemistry blog? Pixie ships full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Subscript in chemistry, math, and beyond',
+    about:
+      'Subscript notation originated in chemistry and mathematics. In chemistry, subscripts indicate the number of atoms of an element in a molecule (H₂O has two hydrogen atoms; the 2 is subscript). In math, subscripts denote sequence indices (x₁, x₂, x₃) or variable subscripts in tensor notation. Unicode standardized subscript characters in the "Latin Subscript" and "Combining Diacritical Marks" blocks. Unlike rich-text subscript in Word or HTML <sub>, Unicode subscripts are real characters that survive copy-paste across any application, which is why students copy chemistry formulas from Google Docs into messaging apps without losing the formatting. Note that subscripts harm screen reader accessibility — if you publish online content, use HTML <sub> tags with proper ARIA labels rather than Unicode characters when the audience matters.',
+  },
+  {
+    slug: 'mortgage-calculator',
+    title: 'Free Mortgage Calculator — Monthly Payments',
+    h1: 'Mortgage Calculator',
+    shortName: 'Mortgage Calculator',
+    tagline: 'Calculate your monthly mortgage payment and full amortization.',
+    metaDescription:
+      'Estimate your monthly home loan payment in seconds. Enter price, down payment, rate, and term to see principal and interest. Free, no signup.',
+    keywords: [
+      'mortgage calculator',
+      'mortgage payment calculator',
+      'home loan calculator',
+      'amortization calculator',
+      'monthly mortgage payment',
+    ],
+    category: 'Calculator',
+    emoji: '🏠',
+    image: '/tools/mortgage-calculator.jpg',
+    imageAlt: 'House keys resting on a mortgage contract with a calculator',
+    primaryKeyword: 'mortgage calculator',
+    intro:
+      'Enter your loan amount, interest rate, and term. See your monthly payment, total interest paid, and a full month-by-month amortization breakdown. Optional AI assistant explains your numbers and suggests strategies to lower the payment.',
+    howItWorks: [
+      {
+        title: 'Enter loan details',
+        description: 'Home price, down payment, interest rate, and loan term (15, 20, or 30 years).',
+      },
+      {
+        title: 'See your monthly payment',
+        description: 'Principal + interest calculated using the standard amortization formula. Optional property tax and insurance fields.',
+      },
+      {
+        title: 'View the amortization schedule',
+        description: 'Month-by-month breakdown showing how much of each payment goes to principal vs. interest.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'How is the monthly mortgage payment calculated?',
+        a: 'The formula is M = P × [r(1+r)ⁿ] / [(1+r)ⁿ - 1], where P is the loan amount, r is the monthly interest rate (annual rate ÷ 12), and n is the total number of payments (years × 12). This calculator runs that formula and adds optional taxes/insurance.',
+      },
+      {
+        q: 'Should I choose a 15-year or 30-year mortgage?',
+        a: 'A 15-year mortgage has higher monthly payments but you pay less than half the total interest. A 30-year mortgage has lower monthly payments and more flexibility, but you pay much more interest over time. Choose based on your monthly cash flow needs vs. long-term cost.',
+      },
+      {
+        q: 'What is amortization?',
+        a: 'Amortization is the schedule of how each monthly payment is split between principal (reducing the loan balance) and interest (cost of borrowing). Early payments are mostly interest; later payments are mostly principal. The schedule shows the exact split for every month.',
+      },
+      {
+        q: 'Does this include taxes and insurance?',
+        a: 'The base calculation shows principal + interest only. You can optionally add property tax and homeowners insurance estimates to see your full PITI (Principal, Interest, Taxes, Insurance) monthly payment.',
+      },
+      {
+        q: 'Are the numbers exact?',
+        a: 'The math is exact for the loan terms you enter. Real-world payments may differ slightly due to PMI, escrow shortages, rate adjustments on ARMs, and lender fees. Always confirm with your loan officer before signing.',
+      },
+    ],
+    relatedSlugs: ['share-incentive-plan-calculator', 'trust-badge-generator', 'pool-salt-calculator'],
+    ctaHook: 'Are you a realtor or mortgage broker? Pixie builds full lead-gen websites with mortgage calculators built in. Text us on WhatsApp.',
+    aboutHeading: 'How mortgage interest really works',
+    about:
+      'A mortgage is a long-term amortizing loan where you pay the same fixed amount each month, but the proportion going to interest vs. principal shifts over time. In the first year of a 30-year mortgage at 7% interest, roughly 80% of every payment is interest and only 20% reduces your principal. By the final year, the ratio flips. This is why making extra principal payments early — even just one extra payment per year — can cut years off your mortgage and save tens of thousands in interest. Use this calculator to model "what if" scenarios: add an extra $100 per month, make biweekly payments instead of monthly, or refinance at a lower rate. The savings compound aggressively when applied early in the loan.',
+  },
+  {
+    slug: 'midpoint-calculator',
+    title: 'Midpoint Calculator — Find the Midpoint of Two Points',
+    h1: 'Midpoint Calculator',
+    shortName: 'Midpoint Calculator',
+    tagline: 'Find the midpoint between two coordinates with steps.',
+    metaDescription:
+      'Find the exact midpoint between two coordinates instantly. Enter (x1, y1) and (x2, y2) to get the midpoint formula result. Free, no signup.',
+    keywords: [
+      'midpoint calculator',
+      'midpoint formula',
+      'midpoint between two points',
+      'coordinate midpoint',
+      'geometry midpoint',
+    ],
+    category: 'Calculator',
+    emoji: '📐',
+    image: '/tools/midpoint-calculator.jpg',
+    imageAlt: 'Math notebook with geometry equations, compass and ruler',
+    primaryKeyword: 'midpoint calculator',
+    intro:
+      'Enter two coordinate points and get the midpoint with a full step-by-step solution. Works for 2D and 3D coordinates. AI explanation breaks down the formula in plain English — perfect for homework or quick problem solving.',
+    howItWorks: [
+      {
+        title: 'Enter two points',
+        description: 'Type the x and y coordinates of Point A and Point B. Add z for 3D problems.',
+      },
+      {
+        title: 'See the midpoint instantly',
+        description: 'Result calculated with the midpoint formula: ((x₁+x₂)/2, (y₁+y₂)/2).',
+      },
+      {
+        title: 'Read the step-by-step',
+        description: 'Full worked solution showing the formula, substitutions, and final answer.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is the midpoint formula?',
+        a: 'The midpoint of two points A(x₁, y₁) and B(x₂, y₂) is M = ((x₁+x₂)/2, (y₁+y₂)/2). You average the x-coordinates and average the y-coordinates. For 3D points, you also average the z-coordinates.',
+      },
+      {
+        q: 'How do I find the midpoint of two points?',
+        a: 'Add the x-coordinates of both points and divide by 2 — that\'s your midpoint x. Do the same for the y-coordinates. The result is the midpoint coordinate. Example: midpoint of (2, 4) and (6, 10) is ((2+6)/2, (4+10)/2) = (4, 7).',
+      },
+      {
+        q: 'Does this work for negative coordinates?',
+        a: 'Yes. The formula works for any real numbers including negatives, decimals, and fractions. Example: midpoint of (-3, 5) and (7, -1) is (2, 2).',
+      },
+      {
+        q: 'Can I use this for 3D coordinates?',
+        a: 'Yes. Switch to 3D mode and enter z-coordinates. The midpoint formula extends naturally: ((x₁+x₂)/2, (y₁+y₂)/2, (z₁+z₂)/2).',
+      },
+      {
+        q: 'What is the midpoint used for?',
+        a: 'Midpoints are used in geometry to find the center of line segments, in computer graphics for line interpolation, in physics for center-of-mass problems, and in navigation for finding the halfway point between two locations on a map.',
+      },
+    ],
+    relatedSlugs: ['ap-chem-score-calculator', 'half-birthday-calculator'],
+    ctaHook: 'Building a tutoring site or math blog? Pixie ships full educational websites from a single WhatsApp message.',
+    aboutHeading: 'The midpoint formula in geometry and beyond',
+    about:
+      'The midpoint formula is one of the foundational tools in coordinate geometry, taught in middle-school algebra and used throughout high school and college math. It is derived directly from the definition of the average of two numbers: the midpoint is the point equidistant from both endpoints along a straight line segment. Beyond pure geometry, midpoints show up in computer graphics (line subdivision algorithms like the midpoint circle algorithm), physics (calculating the center of mass of a two-particle system with equal masses), GIS and mapping (finding meet-in-the-middle locations between two addresses), and statistics (the midrange of a dataset is the midpoint of the minimum and maximum values). The 3D extension just adds a third coordinate average. The same principle generalizes to n dimensions for vector spaces in linear algebra.',
+  },
+  {
+    slug: 'ap-chem-score-calculator',
+    title: 'AP Chem Score Calculator — Predict Your 1-5 Score',
+    h1: 'AP Chemistry Score Calculator',
+    shortName: 'AP Chem Score Calculator',
+    tagline: 'Predict your AP Chemistry score from practice exam results.',
+    metaDescription:
+      'Estimate your AP Chemistry exam score before results day. Enter your multiple-choice and free-response points to see a predicted 1-5. Free, no signup.',
+    keywords: [
+      'ap chemistry score calculator',
+      'ap chem score predictor',
+      'ap chem score',
+      'ap chemistry curve',
+      'ap chemistry exam predictor',
+    ],
+    category: 'Calculator',
+    emoji: '🧪',
+    image: '/tools/ap-chem-score-calculator.jpg',
+    imageAlt: 'Chemistry lab with test tubes and colored solutions',
+    primaryKeyword: 'ap chemistry score calculator',
+    intro:
+      'Enter your raw scores from the AP Chemistry multiple-choice and free-response sections. Get your predicted 1–5 score using the College Board\'s most recent score-conversion curve. Optional AI study plan suggests what to focus on based on your weakest section.',
+    howItWorks: [
+      {
+        title: 'Enter MCQ score',
+        description: 'Number of multiple choice questions you got right out of 60.',
+      },
+      {
+        title: 'Enter free response points',
+        description: 'Total points earned on the 7 free-response questions (out of 46).',
+      },
+      {
+        title: 'Get predicted score',
+        description: 'See your composite score and predicted 1–5 AP score. Optional AI breakdown identifies your weakest content area.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'How is the AP Chemistry score calculated?',
+        a: 'The AP Chem composite score combines your weighted multiple choice score (50% of total) and your free-response score (50% of total). The composite is then mapped to a 1–5 scale using the College Board\'s curve. A composite around 70+ typically earns a 5; 55–69 earns a 4; 40–54 earns a 3.',
+      },
+      {
+        q: 'What score do I need for a 5 on AP Chemistry?',
+        a: 'Roughly 70% of total available points historically maps to a 5. That means about 42/60 multiple choice plus 32/46 free response. The exact cutoff varies year to year based on College Board curve adjustments.',
+      },
+      {
+        q: 'Is this calculator accurate?',
+        a: 'The calculator uses recent published curve data and is accurate within ±1 score band. The College Board adjusts the curve slightly each year, so treat the prediction as a strong estimate, not a guarantee.',
+      },
+      {
+        q: 'What is the AP Chemistry exam format?',
+        a: '60 multiple-choice questions (90 minutes, 50% of score) followed by 7 free-response questions — 3 long (10 points each) and 4 short (4 points each), 105 minutes total, 50% of score. Calculator allowed on both sections.',
+      },
+      {
+        q: 'How should I study for AP Chemistry?',
+        a: 'Focus on the 9 College Board units: Atomic Structure, Molecular Properties, Intermolecular Forces, Chemical Reactions, Kinetics, Thermodynamics, Equilibrium, Acids/Bases, and Applications of Thermodynamics. Practice FRQs from the past 5 years — they signal the exam style. The AI study plan in this tool suggests which unit to prioritize based on your section scores.',
+      },
+    ],
+    relatedSlugs: ['midpoint-calculator', 'subscript-generator'],
+    ctaHook: 'Teach AP Chem? Pixie builds full tutoring sites with course pages, lead forms, and Stripe checkout in 60 seconds. Text us on WhatsApp.',
+    aboutHeading: 'How the AP Chemistry curve really works',
+    about:
+      'The AP Chemistry exam is scored on a 1–5 scale where 3 is considered "qualified" for college credit, 4 is "well qualified", and 5 is "extremely well qualified". Approximately 13–16% of students score a 5 each year, and about 55–60% earn a 3 or higher. The composite score is calculated by weighting your multiple-choice section to 50% (each MCQ worth ~0.83 points after weighting) and your free-response section to 50% (each FRQ point worth ~1.09 after weighting). College Board adjusts the curve based on overall exam difficulty — when the test is harder, the cutoffs drop slightly. The 5 cutoff has hovered around 70% of total points for the last decade. The hardest unit historically is Equilibrium and Acid-Base Chemistry (Units 7–8), which together account for roughly 25% of the exam content.',
+  },
+  {
+    slug: 'pool-salt-calculator',
+    title: 'Pool Salt Calculator — How Much Salt to Add',
+    h1: 'Pool Salt Calculator',
+    shortName: 'Pool Salt Calculator',
+    tagline: 'Calculate exactly how much salt your saltwater pool needs.',
+    metaDescription:
+      'Find out exactly how much salt your saltwater pool needs. Enter pool volume and current salt level to get the pounds to add. Free, no signup.',
+    keywords: [
+      'pool salt calculator',
+      'saltwater pool calculator',
+      'pool salt ppm',
+      'how much salt for pool',
+      'salt water pool maintenance',
+    ],
+    category: 'Calculator',
+    emoji: '🧂',
+    image: '/tools/pool-salt-calculator.jpg',
+    imageAlt: 'Clean backyard swimming pool with clear blue water',
+    primaryKeyword: 'pool salt calculator',
+    intro:
+      'Enter your pool volume and current salt level. Get the exact pounds (or kilograms) of pool salt to add to reach your target salinity. Works for inground, above-ground, and saltwater chlorine generator pools.',
+    howItWorks: [
+      {
+        title: 'Enter pool volume',
+        description: 'Total gallons or liters. If you don\'t know, use the built-in volume estimator (length × width × average depth × 7.48 for rectangular pools).',
+      },
+      {
+        title: 'Enter current salt level',
+        description: 'Read from your salt test strip or salt cell display. Default is 0 ppm if you\'re starting fresh.',
+      },
+      {
+        title: 'Set target salinity',
+        description: 'Most chlorine generators run best at 3000–3500 ppm. Calculator shows exact pounds of pure salt to add.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'How much salt does my pool need?',
+        a: 'A standard saltwater pool needs 3000–3500 ppm of salt. For a 15,000-gallon pool starting at 0 ppm, that\'s about 375–438 pounds of pure pool salt to reach the low end of the range. This calculator gives you the exact number based on your pool volume and current level.',
+      },
+      {
+        q: 'What kind of salt should I use?',
+        a: 'Use pool salt (sodium chloride, ≥99% pure, no iodine, no anti-caking agents). Common brands are AquaSalt and Morton Pool Salt. Never use table salt or rock salt with iodine — the additives stain the pool surface and damage the chlorine generator.',
+      },
+      {
+        q: 'How long does it take for salt to dissolve?',
+        a: 'With pumps running, salt typically fully dissolves and circulates within 24 hours. Brush the bottom of the pool to speed dissolution and prevent salt from settling on plaster or vinyl liners (it can stain).',
+      },
+      {
+        q: 'Why is my salt cell saying "Low Salt"?',
+        a: 'Either your salt level is genuinely below 2700 ppm (add salt per this calculator) or your salt cell is dirty/calcified and giving a false low reading. Clean the cell with diluted muriatic acid before adding more salt.',
+      },
+      {
+        q: 'Can I add too much salt?',
+        a: 'Yes. Above ~4500 ppm, the water tastes salty, can corrode metal pool components, and damages chlorine generators (most have a high-salt shutoff at 5500 ppm). If you over-salt, the only fix is to drain and refill partially with fresh water.',
+      },
+    ],
+    relatedSlugs: ['mortgage-calculator', 'share-incentive-plan-calculator'],
+    ctaHook: 'Run a pool service business? Pixie builds full booking websites with payment, lead forms, and SEO. Text us on WhatsApp.',
+    aboutHeading: 'How saltwater pools actually work',
+    about:
+      'A saltwater pool is not chlorine-free — it generates its own chlorine on-demand from dissolved salt. The salt chlorine generator (SCG) runs pool water past a cell with low-voltage electrolysis, splitting NaCl into chlorine gas (which sanitizes the water) and sodium (which stays dissolved). Because the salt is consumed extremely slowly and replenished mostly by the natural recombination of byproducts, you usually only add salt after heavy rain, splash-out, or backwashing — about 1–2 times per swimming season for most pools. Ideal range is 3000–3500 ppm; below 2700 the generator can\'t produce enough chlorine, above 4500 the water feels salty and starts corroding metal. The salt itself is dirt-cheap (around $10–15 per 40-lb bag) but the chlorine generator cell costs $400–800 and lasts 3–5 years. The math for adding salt is straightforward: pounds needed = (target ppm − current ppm) × pool gallons × 0.00000834. This calculator does that conversion automatically.',
+  },
+  {
+    slug: 'share-incentive-plan-calculator',
+    title: 'Share Incentive Plan Calculator for UK SIPs',
+    h1: 'Share Incentive Plan (SIP) Calculator',
+    shortName: 'SIP Calculator',
+    tagline: 'Calculate your UK Share Incentive Plan tax savings.',
+    metaDescription:
+      'Work out the value and tax savings of your UK SIP shares. Free share incentive plan calculator covering partnership, matching, and free shares. No signup.',
+    keywords: [
+      'share incentive plan calculator',
+      'sip calculator uk',
+      'share incentive plan tax',
+      'sip tax savings',
+      'partnership shares calculator',
+    ],
+    category: 'Calculator',
+    emoji: '📈',
+    image: '/tools/share-incentive-plan-calculator.jpg',
+    imageAlt: 'Stock market financial chart on a screen',
+    primaryKeyword: 'share incentive plan calculator',
+    intro:
+      'Calculate the tax savings from contributing to your employer\'s UK Share Incentive Plan (SIP). Models partnership shares, free shares, matching shares, and dividend shares against the 5-year HMRC holding period for full tax efficiency.',
+    howItWorks: [
+      {
+        title: 'Enter your salary and contribution',
+        description: 'Annual gross salary and how much you want to put into partnership shares per month (up to £150 or 10% of salary, whichever is lower).',
+      },
+      {
+        title: 'Add employer match',
+        description: 'If your employer offers matching shares (up to 2 free shares per partnership share), include the ratio.',
+      },
+      {
+        title: 'See your 5-year tax benefit',
+        description: 'Compare net cost vs. share value after the 5-year HMRC holding period — including saved income tax and National Insurance.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is a Share Incentive Plan (SIP)?',
+        a: 'A SIP is a UK tax-advantaged employee share scheme. You can buy company shares from pre-tax salary (partnership shares), receive free shares from your employer (up to £3,600/year), and potentially get matching shares (up to 2 per partnership share). Hold for 5 years and pay zero income tax and National Insurance on the shares.',
+      },
+      {
+        q: 'How much can I contribute to a SIP per year?',
+        a: 'Partnership shares: up to £1,800 per year or 10% of your salary (whichever is lower). Free shares: up to £3,600 per year. Matching shares: at the employer\'s discretion, up to 2 per partnership share. Dividend shares: reinvested without limit.',
+      },
+      {
+        q: 'When do I pay tax on SIP shares?',
+        a: 'Sell within 3 years: full income tax + NI on the market value at withdrawal. Sell between 3–5 years: tax on the lower of original price or market value. Hold for 5+ years: zero income tax, zero NI. You may still pay Capital Gains Tax if you sell at a gain after withdrawal.',
+      },
+      {
+        q: 'Is SIP better than a regular ISA?',
+        a: 'For company stock, SIP is usually better due to the income tax + NI savings on the contribution (effectively a ~32% discount for basic-rate taxpayers, ~42% for higher-rate). However, concentrating wealth in a single employer is risky — if the company tanks, you lose both your job and your savings. Most advisors suggest diversifying after the 5-year hold.',
+      },
+      {
+        q: 'Is this calculator HMRC compliant?',
+        a: 'The calculator uses current HMRC SIP rules and tax bands for the 2025/26 tax year. It\'s an estimation tool, not financial advice — consult an accountant before making decisions, especially around CGT planning at withdrawal.',
+      },
+    ],
+    relatedSlugs: ['mortgage-calculator', 'trust-badge-generator', 'pool-salt-calculator'],
+    ctaHook: 'Run a UK accounting or fintech firm? Pixie builds compliance-ready lead-gen sites in 60 seconds. Text us on WhatsApp.',
+    aboutHeading: 'Why SIPs are the UK\'s most tax-efficient share scheme',
+    about:
+      'Share Incentive Plans are HMRC-approved employee share schemes introduced in 2000 to encourage employee ownership. They are the most tax-efficient way for UK employees to acquire their employer\'s shares because the partnership share contribution comes out of gross salary — saving income tax (20%, 40%, or 45%) and Employee National Insurance (8% or 2%) at the point of purchase. Combined with potential employer matching and a 5-year tax-free holding period, the effective return can exceed any ISA or pension contribution for company shares. The catch is concentration risk: holding a meaningful percentage of your net worth in a single company exposes you to both job loss and stock crash in correlated ways. The classic example is Enron employees who held company stock in their 401(k)s — when the company collapsed, they lost jobs and savings simultaneously. SIPs in the UK have slightly better protections because they are not retirement accounts, but the diversification lesson stands: take the tax benefit, then sell and diversify once the 5-year hold matures.',
+  },
+  {
+    slug: 'half-birthday-calculator',
+    title: 'Half Birthday Calculator — Find Your Half Birthday',
+    h1: 'Half Birthday Calculator',
+    shortName: 'Half Birthday Calculator',
+    tagline: 'Find your half birthday — exactly 6 months from your birth date.',
+    metaDescription:
+      'Find your exact half birthday in one click. Enter your birth date and see the day you turn another half year older. Free, no signup.',
+    keywords: [
+      'half birthday calculator',
+      'half birthday',
+      'half birthday date',
+      'find half birthday',
+      'when is my half birthday',
+    ],
+    category: 'Calculator',
+    emoji: '🎂',
+    image: '/tools/half-birthday-calculator.jpg',
+    imageAlt: 'Birthday cake with lit candles and festive decorations',
+    primaryKeyword: 'half birthday calculator',
+    intro:
+      'Enter your birthday and instantly find your half birthday — the exact date six months from when you were born. Perfect for school cutoffs, summer-birthday kids who want a "half" celebration, gift planning, and social media posts. AI generates message and gift ideas.',
+    howItWorks: [
+      {
+        title: 'Enter your birth date',
+        description: 'Month, day, and year. The year doesn\'t affect the half-birthday date — just used for the age calculation.',
+      },
+      {
+        title: 'See your half birthday',
+        description: 'Calculated as 6 months from your birthday (handling 29/30/31-day month edge cases automatically).',
+      },
+      {
+        title: 'Get message ideas',
+        description: 'Optional AI suggestions for half birthday messages, gift ideas, and celebration themes.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is a half birthday?',
+        a: 'Your half birthday is the date exactly six months from your birthday — when you become 6 months older. If you were born on January 15, your half birthday is July 15. The concept is popular with kids who have summer birthdays during school break and want a celebration during the school year.',
+      },
+      {
+        q: 'How do you calculate a half birthday?',
+        a: 'Add six months to your birthday. The calculator handles edge cases automatically — for example, if you were born on August 31, your half birthday falls on the last day of February (February 28 or 29 in a leap year), since February doesn\'t have a 31st.',
+      },
+      {
+        q: 'Why do people celebrate half birthdays?',
+        a: 'Most commonly: kids with summer birthdays whose friends are all on vacation, terminally ill patients celebrating milestones, dog parents marking pet ages, and couples who want extra reasons to celebrate together. Schools sometimes recognize half-birthdays so summer-birthday kids get the classroom moment.',
+      },
+      {
+        q: 'Is the half birthday calculation always exactly 6 months?',
+        a: 'Yes — it\'s always 6 calendar months. Note that 6 months is not exactly half a year in days (a year has 365.25 days; 6 months is 182.625 days, but calendar months vary), so the date is a calendar approximation, not a precise 182.5-day shift.',
+      },
+      {
+        q: 'Can I share the result?',
+        a: 'Yes. The calculator generates a shareable text card with your half birthday date and an AI-suggested celebration message. Copy and paste to Instagram, WhatsApp, or text.',
+      },
+    ],
+    relatedSlugs: ['midpoint-calculator', 'ap-chem-score-calculator'],
+    ctaHook: 'Run a kids\' party planning business or gifting brand? Pixie builds shoppable sites from one WhatsApp message.',
+    aboutHeading: 'The cultural rise of the half birthday',
+    about:
+      'Half birthdays are a modern cultural phenomenon that exploded with social media. The tradition originally served two specific groups: kids with summer birthdays who couldn\'t celebrate at school, and people with serious illnesses for whom every milestone mattered. Over the past decade, half birthdays have gone mainstream — celebrities post half birthday tributes to their kids, dog owners post pet half birthdays, and couples mark relationship half-anniversaries. From a calendar-math perspective, the half birthday is simply six calendar months added to the birth date, with sensible handling of month-length edge cases (a January 31 birthday gives a July 31 half birthday; an August 31 birthday gives the last day of February). Some traditions calculate it as exactly 182.5 days after the birthday, but the calendar-month version is far more common in practice because it falls on the same numeric day of the month, making it easier to remember.',
+  },
+  {
+    slug: 'ap-bio-score-calculator',
+    title: 'AP Bio Score Calculator — Predict Your 1-5 Score',
+    h1: 'AP Biology Score Calculator',
+    shortName: 'AP Bio Score Calculator',
+    tagline: 'Predict your AP Biology score from practice exam results.',
+    metaDescription:
+      'Estimate your AP Biology exam score before results day. Enter your multiple-choice and free-response points to see a predicted 1-5. Free, no signup.',
+    keywords: ['ap bio score calculator', 'ap biology score calculator', 'ap bio score predictor', 'ap biology curve', 'ap bio exam score'],
+    category: 'Calculator',
+    emoji: '🧬',
+    image: '/tools/ap-bio-score-calculator.jpg',
+    imageAlt: 'Biology textbook open to DNA double helix diagram',
+    primaryKeyword: 'ap bio score calculator',
+    intro:
+      'Enter your raw multiple-choice and free-response scores from the AP Biology exam. Get your predicted 1–5 score using the College Board\'s latest scoring conversion. See exactly how many more MCQ or FRQ points you need to reach the next score band.',
+    howItWorks: [
+      { title: 'Enter MCQ score', description: 'Number of multiple-choice questions correct out of 60.' },
+      { title: 'Enter free-response points', description: 'Total points earned on all 6 free-response questions (out of 40).' },
+      { title: 'Get predicted score', description: 'See your composite score and predicted 1–5 AP score with breakdown.' },
+    ],
+    faqs: [
+      {
+        q: 'How is the AP Biology score calculated?',
+        a: 'The AP Bio composite combines your MCQ section (60 questions, 50% weight) and FRQ section (6 questions, 50% weight). Both halves are scaled to 50 points and added together to form a 0–100 composite, then mapped to a 1–5 AP score using College Board cutoffs.',
+      },
+      {
+        q: 'What score do I need for a 5 on AP Bio?',
+        a: 'Historically, a composite of around 70%+ maps to a 5 — roughly 42/60 MCQ and 28/40 FRQ. The exact cutoff shifts yearly based on exam difficulty.',
+      },
+      {
+        q: 'Is this calculator accurate?',
+        a: 'The calculator uses published College Board curve data and is accurate within ±1 score band. Treat the prediction as a strong estimate — the real cutoff adjusts each year.',
+      },
+      {
+        q: 'What is the AP Biology exam format?',
+        a: '60 multiple-choice questions (90 min, 50% of score) + 6 free-response questions (90 min, 50% of score): 2 long FRQ (8–10 pts each) and 4 short FRQ (4 pts each).',
+      },
+      {
+        q: 'What units are on the AP Biology exam?',
+        a: 'The 8 units: Chemistry of Life, Cell Structure & Function, Cellular Energetics, Cell Communication & Cell Cycle, Heredity, Gene Expression & Regulation, Natural Selection, and Ecology. Units 3–4 have the heaviest weighting.',
+      },
+    ],
+    relatedSlugs: ['ap-chem-score-calculator', 'ap-calc-ab-score-calculator'],
+    ctaHook: 'Teach AP Biology? Pixie generates your tutoring website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How the AP Biology curve works',
+    about:
+      'AP Biology is one of the most popular AP exams, taken by over 280,000 students annually. About 14–16% earn a 5, and roughly 65% earn a 3 or higher. The exam was significantly redesigned in 2020 to emphasize scientific reasoning and data analysis over memorization. FRQ questions now frequently include graphs, experimental design problems, and mathematical models. The hardest units are Gene Expression (Unit 6) and Ecology (Unit 8). Unlike AP Chem, AP Bio allows some reference materials during the exam. The composite score combines both sections equally at 50% each, and College Board adjusts the 5-cutoff by 2–5 points annually based on overall exam difficulty.',
+  },
+  {
+    slug: 'ap-calc-ab-score-calculator',
+    title: 'AP Calc AB Score Calculator — Predict 1-5 Score',
+    h1: 'AP Calculus AB Score Calculator',
+    shortName: 'AP Calc AB Score Calculator',
+    tagline: 'Predict your AP Calculus AB score from practice exam results.',
+    metaDescription:
+      'Estimate your AP Calculus AB exam score before results day. Enter your multiple-choice and free-response points to see a predicted 1-5. Free, no signup.',
+    keywords: ['ap calc ab score calculator', 'ap calculus ab score', 'ap calc ab predictor', 'ap calculus ab curve', 'ap calc score'],
+    category: 'Calculator',
+    emoji: '∫',
+    image: '/tools/ap-calc-ab-score-calculator.jpg',
+    imageAlt: 'Calculus textbook open with mathematical equations and graphs',
+    primaryKeyword: 'ap calc ab score calculator',
+    intro:
+      'Enter your raw multiple-choice and free-response scores from AP Calculus AB. See your predicted 1–5 score using the College Board\'s most recent scoring curve, plus how many more points you need to hit the next score band.',
+    howItWorks: [
+      { title: 'Enter MCQ score', description: 'Total multiple-choice correct out of 45 (30 no-calculator + 15 calculator).' },
+      { title: 'Enter FRQ points', description: 'Total points earned across 6 free-response questions (max 54 points).' },
+      { title: 'Get predicted score', description: 'See composite score and predicted 1–5 AP score.' },
+    ],
+    faqs: [
+      {
+        q: 'How is AP Calculus AB scored?',
+        a: 'The exam has two sections worth 50% each. Section I: 45 MCQ (30 no-calc, 15 calc). Section II: 6 FRQ (3 no-calc, 3 calc), each worth 9 points (54 total). Both sections are scaled to 50 composite points and combined.',
+      },
+      {
+        q: 'What score do I need for a 5 on AP Calc AB?',
+        a: 'Typically around 70% of total points — about 31/45 MCQ and 38/54 FRQ. The exact cutoff varies slightly each year; historically the 5 cutoff has been near 65–70% composite.',
+      },
+      {
+        q: 'Is AP Calc AB harder than AP Calc BC?',
+        a: 'AP Calc AB covers roughly the first semester of college calculus (limits, derivatives, integrals). AP Calc BC covers all of AB plus series, parametric, polar, and more. BC has a higher 5 rate (~40%) because only motivated students take it.',
+      },
+      {
+        q: 'What topics are on AP Calc AB?',
+        a: 'Limits and continuity, derivatives (basic, chain rule, implicit), applications of derivatives (optimization, related rates), integrals, the Fundamental Theorem of Calculus, area between curves, and basic differential equations.',
+      },
+      {
+        q: 'Can I use a calculator on AP Calc AB?',
+        a: 'On Part B of Section I (15 MCQ) and Part B of Section II (3 FRQ) yes. The rest is no-calculator. A graphing calculator is required — TI-84, TI-Nspire, or equivalent.',
+      },
+    ],
+    relatedSlugs: ['ap-bio-score-calculator', 'ap-psych-score-calculator'],
+    ctaHook: 'Teach calculus? Pixie generates your tutoring website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How the AP Calc AB scoring curve works',
+    about:
+      'AP Calculus AB is taken by roughly 300,000 students each year, making it one of the most common AP exams. About 20–22% earn a 5, and roughly 58–63% earn a 3 or higher — a higher 3+ rate than AP Chemistry or AP Physics. The exam tests limits, derivatives, integrals, the Fundamental Theorem, differential equations, and accumulation. Free-response questions are scored by trained AP readers who follow strict rubrics — partial credit is awarded, so showing work matters even when the final answer is wrong. Each FRQ is worth 9 points. The most commonly missed topics on AP Calc AB FRQs are related rates, implicit differentiation, and accumulation functions.',
+  },
+  {
+    slug: 'ap-psych-score-calculator',
+    title: 'AP Psych Score Calculator — Predict Your 1-5 Score',
+    h1: 'AP Psychology Score Calculator',
+    shortName: 'AP Psych Score Calculator',
+    tagline: 'Predict your AP Psychology score from practice exam results.',
+    metaDescription:
+      'Estimate your AP Psychology exam score before results day. Enter your multiple-choice and free-response points to see a predicted 1-5. Free, no signup.',
+    keywords: ['ap psych score calculator', 'ap psychology score', 'ap psych predictor', 'ap psychology curve', 'ap psych exam score'],
+    category: 'Calculator',
+    emoji: '🧠',
+    image: '/tools/ap-psych-score-calculator.jpg',
+    imageAlt: 'Psychology textbook with brain diagram and neural network illustration',
+    primaryKeyword: 'ap psych score calculator',
+    intro:
+      'Enter your raw multiple-choice and free-response scores from the AP Psychology exam. Get your predicted 1–5 score using the College Board\'s latest scoring conversion. See exactly how many more points you need to reach the next score band.',
+    howItWorks: [
+      { title: 'Enter MCQ score', description: 'Number of multiple-choice questions correct out of 100.' },
+      { title: 'Enter FRQ points', description: 'Total points earned on both free-response questions (max 14 points, 7 each).' },
+      { title: 'Get predicted score', description: 'See your composite and predicted AP score with section breakdown.' },
+    ],
+    faqs: [
+      {
+        q: 'How is AP Psychology scored?',
+        a: 'Section I: 100 MCQ (70 min), worth 66.7% of composite. Section II: 2 FRQ — concept application (7 pts) + research design (7 pts), 50 min, worth 33.3% of composite. The two sections are weighted and combined into a 0–100 composite.',
+      },
+      {
+        q: 'What score do I need for a 5 on AP Psych?',
+        a: 'Typically around 75–80% of total composite. On the MCQ, that means roughly 80+ correct. The 2 FRQ questions (7 pts each) are scored strictly — even one missed component drops you a point.',
+      },
+      {
+        q: 'Is AP Psychology easy?',
+        a: 'AP Psych has one of the highest 5-rates of common AP exams — about 22–24% earn a 5, and roughly 65% earn a 3+. FRQ scoring is strict: you must use exact terminology correctly, like distinguishing "classical" from "operant" conditioning precisely.',
+      },
+      {
+        q: 'What topics are on AP Psychology?',
+        a: '9 units: Biological Bases of Behavior, Sensation & Perception, States of Consciousness, Learning, Cognitive Psychology, Developmental Psychology, Motivation/Emotion/Personality, Clinical Psychology, and Social Psychology. Social Psychology and Clinical Psychology together account for ~30% of MCQs.',
+      },
+      {
+        q: 'How are the AP Psych FRQs graded?',
+        a: 'Each FRQ is scored on a strict point-by-point rubric. The concept application question asks you to apply ~7 psychological terms to a scenario — each term earns 1 point only if correctly applied in context. Partial credit is given per term.',
+      },
+    ],
+    relatedSlugs: ['ap-bio-score-calculator', 'ap-calc-ab-score-calculator'],
+    ctaHook: 'Teach AP Psychology? Pixie generates your tutoring website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Why AP Psychology has one of the highest 5 rates',
+    about:
+      'AP Psychology is the second most popular AP exam after AP Language, with over 350,000 test-takers annually. It has one of the highest 5-rates of any major AP exam (22–24%) because it does not require the mathematical fluency needed for AP Sciences or the writing speed of AP English. However, FRQ performance separates average students from high scorers: the concept application question demands precise use of psychological terminology. The most tested topics are Units 7–8 (Motivation, Emotion, Clinical Psychology). Psychologists like Freud, Pavlov, Skinner, Bandura, and Kohlberg appear frequently on MCQs.',
+  },
+  {
+    slug: 'calculator-bacalaureat',
+    title: 'Calculator Bacalaureat — Calculează Media BAC',
+    h1: 'Calculator Bacalaureat',
+    shortName: 'Calculator Bacalaureat',
+    tagline: 'Calculează media de absolvire a examenului de bacalaureat.',
+    metaDescription:
+      'Calculează-ți media la Bacalaureat în câteva secunde. Introdu notele de la fiecare probă și află instant rezultatul final. Gratuit, fără cont.',
+    keywords: ['calculator bacalaureat', 'media bacalaureat', 'calcul bacalaureat', 'nota bacalaureat', 'promovat bacalaureat'],
+    category: 'Calculator',
+    emoji: '🎓',
+    image: '/tools/calculator-bacalaureat.jpg',
+    imageAlt: 'Student with diploma and graduation ceremony',
+    primaryKeyword: 'calculator bacalaureat',
+    intro:
+      'Introdu notele de la probele scrise, orale și competențe pentru a calcula media finală de bacalaureat. Calculatorul urmează grila oficială de ponderare — află dacă ai promovat și cu câte puncte.',
+    howItWorks: [
+      { title: 'Introdu notele la scris', description: 'Nota la Română scris, proba obligatorie de profil și proba la alegere.' },
+      { title: 'Adaugă probele orale și media liceu', description: 'Notele la oral Română, limbă modernă, competențe digitale și media generală din liceu (cl. 9–12).' },
+      { title: 'Află media finală', description: 'Calculatorul afișează media ponderată și dacă ai promovat (minim 6.00, note individuale ≥ 5.00).' },
+    ],
+    faqs: [
+      {
+        q: 'Cum se calculează media de bacalaureat?',
+        a: 'Media finală = (Română scris × 0.2) + (Probă obligatorie profil × 0.2) + (Probă la alegere × 0.2) + (Oral Română × 0.1) + (Oral limbă modernă × 0.1) + (Competențe digitale × 0.1) + (Media generală liceu × 0.1). Suma ponderilor = 1.0.',
+      },
+      {
+        q: 'Ce medie trebuie să am pentru a promova?',
+        a: 'Condiții de promovare: (1) media finală ≥ 6.00; (2) fiecare notă la probele scrise ≥ 5.00; (3) fiecare notă la probele orale ≥ 5.00. Dacă oricare notă scrisă este sub 5, examenul nu este promovat indiferent de medie.',
+      },
+      {
+        q: 'Cum influențează media de liceu nota finală?',
+        a: 'Media generală din liceu (cl. 9–12) influențează 10% din nota finală de bacalaureat. Este media aritmetică a tuturor mediilor anuale din clasele 9–12.',
+      },
+      {
+        q: 'Câte probe scrise sunt la bacalaureat?',
+        a: 'Există 3 probe scrise: Română (obligatorie), o probă obligatorie de profil (ex. Matematică pentru real, Istorie pentru uman), și o probă la alegere a profilului. Fiecare probă durează 3 ore.',
+      },
+      {
+        q: 'Ce se întâmplă dacă ai picat bacalaureatul?',
+        a: 'Poți susține examenul în sesiunile din august ale aceluiași an sau în sesiunile din anii următori, fără limită de număr. Probele susținute cu notă ≥ 5.00 pot fi păstrate timp de 2 ani.',
+      },
+    ],
+    relatedSlugs: ['ap-bio-score-calculator', 'midpoint-calculator'],
+    ctaHook: 'Ești profesor sau meditator? Pixie îți generează site-ul în 60 de secunde — scrie-ne pe WhatsApp.',
+    aboutHeading: 'Cum funcționează examenul de bacalaureat în România',
+    about:
+      'Bacalaureatul românesc este examenul de absolvire a liceului, echivalentul A-Level-urilor britanice. Susținut de elevi din clasa a 12-a, examenul include probe scrise pe 3 zile (Română, profil obligatoriu, la alegere) și probe orale evaluate anterior. Rata de promovare variază între 60–75% la nivel național. Notele de la bacalaureat sunt esențiale pentru admiterea la universitățile din România. Ministerul Educației publică anual metodologia de calcul; acest calculator implementează formula standard pentru sesiunea 2025–2026.',
+  },
+  {
+    slug: 'crosswind-calculator',
+    title: 'Crosswind Calculator — Runway Wind Component',
+    h1: 'Crosswind Calculator',
+    shortName: 'Crosswind Calculator',
+    tagline: 'Calculate crosswind and headwind components for any runway.',
+    metaDescription:
+      'Calculate the crosswind and headwind component for any runway in seconds. Enter wind direction, speed, and runway heading. Free, no signup.',
+    keywords: ['crosswind calculator', 'crosswind component calculator', 'aviation crosswind', 'headwind calculator', 'runway crosswind'],
+    category: 'Calculator',
+    emoji: '✈️',
+    image: '/tools/crosswind-calculator.jpg',
+    imageAlt: 'Small aircraft on a runway with a wind sock blowing sideways',
+    primaryKeyword: 'crosswind calculator',
+    intro:
+      'Enter the wind direction (from ATIS or METAR), wind speed, and the runway heading you\'re departing or landing on. Get the exact crosswind and headwind/tailwind component in seconds — no trigonometry required. Essential for student pilots and checkride prep.',
+    howItWorks: [
+      { title: 'Enter wind direction & speed', description: 'Wind direction in degrees and speed in knots from your ATIS/METAR report.' },
+      { title: 'Enter runway heading', description: 'The runway heading in degrees (runway 27 = 270°, runway 09 = 090°).' },
+      { title: 'Get crosswind & headwind', description: 'See the crosswind component and headwind (positive) or tailwind (negative) instantly.' },
+    ],
+    faqs: [
+      {
+        q: 'How do you calculate crosswind component?',
+        a: 'Crosswind = wind speed × sin(wind angle), where wind angle is the difference between wind direction and runway heading. Example: wind from 270°, runway 240° → wind angle = 30° → Crosswind = 20 kts × sin(30°) = 10 kts.',
+      },
+      {
+        q: 'How do you calculate headwind component?',
+        a: 'Headwind = wind speed × cos(wind angle). Using the same example: 20 kts × cos(30°) = 17.3 kts headwind. A negative value means a tailwind.',
+      },
+      {
+        q: 'What is the max crosswind for a Cessna 172?',
+        a: 'The Cessna 172S has a demonstrated crosswind component of 15 knots. As a student pilot, treating it as a personal limit is wise. Always check your specific aircraft\'s POH.',
+      },
+      {
+        q: 'What does demonstrated crosswind component mean?',
+        a: 'It\'s the maximum crosswind at which the aircraft was tested during certification. The actual maximum depends on pilot skill — experienced pilots can handle crosswinds beyond the demonstrated limit in good conditions.',
+      },
+      {
+        q: 'What runway number should I enter?',
+        a: 'Multiply the runway number by 10 to get the heading. Runway 27 = 270°, Runway 09 = 090°, Runway 36 = 360°. Use the runway you\'re actually landing on.',
+      },
+    ],
+    relatedSlugs: ['dunk-calculator', 'midpoint-calculator'],
+    ctaHook: 'Run a flight school or aviation blog? Pixie generates your website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Why crosswind calculation matters in aviation',
+    about:
+      'Crosswind landings are one of the most skill-intensive maneuvers in general aviation, and exceeding crosswind limits is a leading cause of runway excursions. The crosswind component formula resolves the wind vector into two components relative to the runway: one parallel (headwind/tailwind) and one perpendicular (crosswind). Each aircraft has a "demonstrated crosswind" value in the POH — for the Cessna 172, it\'s 15 knots; for a Boeing 737, up to 35 knots. ATIS and METAR reports give wind in degrees magnetic and speed in knots, so this calculator accepts those inputs directly. Always verify conditions at the actual airport — ground-level winds can differ significantly from reported winds.',
+  },
+  {
+    slug: 'dunk-calculator',
+    title: 'Dunk Calculator — Can You Dunk a Basketball?',
+    h1: 'Dunk Calculator',
+    shortName: 'Dunk Calculator',
+    tagline: 'Find out if you can dunk — and exactly how high you need to jump.',
+    metaDescription:
+      'Find out if you can dunk and how high you need to jump. Enter your height, standing reach, and vertical to see the rim you can reach. Free, no signup.',
+    keywords: ['dunk calculator', 'can i dunk calculator', 'vertical jump to dunk', 'how high to dunk', 'basketball dunk calculator'],
+    category: 'Calculator',
+    emoji: '🏀',
+    image: '/tools/dunk-calculator.jpg',
+    imageAlt: 'Basketball player dunking over a defender in a gym',
+    primaryKeyword: 'dunk calculator',
+    intro:
+      'Enter your height and standing reach to find out exactly how high you need to jump to dunk a standard 10-foot basketball rim. See your vertical gap, athleticism rating, and specific training targets to get you dunking.',
+    howItWorks: [
+      { title: 'Enter your height', description: 'Your height in feet/inches or cm. Used to estimate standing reach if you don\'t know it.' },
+      { title: 'Enter standing reach (optional)', description: 'How high you can reach flat-footed with arm fully extended. Defaults to height × 1.33.' },
+      { title: 'See your dunk gap', description: 'How many inches above the rim you need to reach, and the vertical jump needed to close that gap.' },
+    ],
+    faqs: [
+      {
+        q: 'How high do you need to jump to dunk?',
+        a: 'The rim is at 10 feet (120 inches). You need your hand at least 6 inches above the rim to place the ball — so roughly 126 inches. Vertical needed = 126 inches minus your standing reach. A 6\'0" person has a standing reach of ~96 inches, so they need a ~30-inch vertical to dunk.',
+      },
+      {
+        q: 'What vertical jump is needed to dunk at 5\'9"?',
+        a: 'At 5\'9", standing reach is about 91 inches. You need fingertips to reach 126", so your vertical gap is 35 inches. A 35-inch vertical is elite athlete territory — achievable with serious training but not easy.',
+      },
+      {
+        q: 'Can a 5\'10" person dunk?',
+        a: 'Yes, but it requires a 30–35 inch vertical. Standing reach at 5\'10" is about 92 inches. Most recreational players need focused plyometric training to reach this.',
+      },
+      {
+        q: 'How do I increase my vertical jump?',
+        a: 'Proven methods: plyometric training (box jumps, depth jumps), strength training (squats, Romanian deadlifts, hip thrusts), and sprint work. Most athletes can add 4–8 inches to their vertical in 8–12 weeks of focused training.',
+      },
+      {
+        q: 'What is a good standing reach?',
+        a: 'Average standing reach is about 1.33× your height. NBA players average higher because they\'re selected for wingspan. If your reach is notably below 1.3× height, improving shoulder mobility can help.',
+      },
+    ],
+    relatedSlugs: ['crosswind-calculator', 'midpoint-calculator'],
+    ctaHook: 'Run a basketball gym or coaching business? Pixie generates your website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'The physics and training science behind dunking',
+    about:
+      'Dunking a basketball requires overcoming a precise physical gap: the rim is at 10 feet, and you need your hand at least 6 inches above it to place the ball — so fingertip reach must hit 126 inches. The gap between your standing reach and 126 inches is your vertical jump requirement. Most adults need a 24–40 inch vertical depending on height. The world record standing vertical jump is 46 inches (Brett Williams, 2019). In the NBA, the average vertical is about 28 inches. Training the vertical primarily targets fast-twitch muscle fibers in the quadriceps, glutes, and calves. Plyometric exercises are the most evidence-backed method for increasing jump height. Most programs report 4–8 inch gains in 8–12 weeks.',
+  },
+  {
+    slug: 'dots-calculator',
+    title: 'DOTS Calculator — Score Your Powerlifting Lift',
+    h1: 'DOTS Calculator',
+    shortName: 'DOTS Calculator',
+    tagline: 'Score your powerlifting total across any bodyweight.',
+    metaDescription:
+      'Score and compare powerlifting totals across body weights with the DOTS formula. Enter bodyweight and total to get your DOTS points. Free, no signup.',
+    keywords: ['dots calculator', 'dots score calculator', 'powerlifting dots calculator', 'dots coefficient calculator', 'powerlifting score calculator'],
+    category: 'Calculator',
+    emoji: '🏋️',
+    image: '/tools/dots-calculator.jpg',
+    imageAlt: 'Powerlifter mid-deadlift with a loaded barbell in a gym',
+    primaryKeyword: 'dots calculator',
+    intro:
+      'Enter your bodyweight and total lifted to score your performance on the DOTS scale — the modern coefficient that lets lifters of any size compare strength pound-for-pound. Works in kg or lb for men and women, and rates your score from novice to world class.',
+    howItWorks: [
+      { title: 'Pick sex and units', description: 'DOTS uses separate coefficients for men and women. Switch between kg and lb to match your meet or gym.' },
+      { title: 'Enter bodyweight and total', description: 'Your bodyweight and the total you lifted (squat + bench + deadlift, or any total you want to score).' },
+      { title: 'Get your DOTS score', description: 'See your DOTS points and a rating from novice to world class — comparable across every weight class.' },
+    ],
+    faqs: [
+      {
+        q: 'What is a DOTS score?',
+        a: 'DOTS is a coefficient that adjusts your total for bodyweight so lifters of different sizes can be ranked on one scale. Multiply your total by your DOTS coefficient and you get a single number — higher means stronger pound-for-pound.',
+      },
+      {
+        q: 'How is the DOTS score calculated?',
+        a: 'DOTS = total × 500 ÷ (a·bw⁴ + b·bw³ + c·bw² + d·bw + e), where bw is bodyweight in kg and the five coefficients differ for men and women. This calculator runs that exact formula.',
+      },
+      {
+        q: 'What is a good DOTS score?',
+        a: 'As a rough guide: under 200 is novice, around 300 is a solid intermediate/advanced lifter, 400 is elite/competitive, and 500+ is world-class. The exact bands vary slightly by federation and sex.',
+      },
+      {
+        q: 'DOTS vs Wilks — what is the difference?',
+        a: 'DOTS was introduced in 2019 as an updated single-formula replacement for the older Wilks coefficient. It uses one modern dataset for each sex and is considered fairer to lighter and heavier lifters than the original Wilks.',
+      },
+      {
+        q: 'Does DOTS work for both men and women?',
+        a: 'Yes. DOTS uses a separate set of five coefficients for men and women, so select your sex before scoring. The result is directly comparable across sexes and weight classes.',
+      },
+    ],
+    relatedSlugs: ['dunk-calculator', 'era-calculator'],
+    ctaHook: 'Run a powerlifting gym, coaching service, or barbell club? Pixie generates your website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How the DOTS formula scores strength',
+    about:
+      'DOTS solves a basic problem in strength sports: a 60 kg lifter and a 120 kg lifter can never be compared by raw total, because bigger bodies move bigger weights. A coefficient based on bodyweight levels the field. The original solution was the Wilks coefficient, used for decades, but it was criticized for unfairly favoring lifters at certain bodyweights. In 2019 Tim Konertz published DOTS as a modernized replacement, fitting a single fourth-order polynomial to updated competition data for each sex. The formula is total × 500 ÷ (a·bw⁴ + b·bw³ + c·bw² + d·bw + e). DOTS is now the default scoring system in many federations and lifting apps because it produces one clean, sex- and size-adjusted number, making it easy to rank an entire meet — or compare your own progress as your bodyweight changes — on a single scale.',
+  },
+  {
+    slug: 'middle-name-generator',
+    title: 'Middle Name Generator — Find the Perfect Middle Name',
+    h1: 'Middle Name Generator',
+    shortName: 'Middle Name Generator',
+    tagline: 'Generate perfect middle name ideas based on first and last name.',
+    metaDescription:
+      'Find a middle name that flows with any first name. Enter a first name and get matching middle name ideas for boys and girls. Free, no signup.',
+    keywords: ['middle name generator', 'middle name ideas', 'baby middle name', 'find middle name', 'middle name for baby'],
+    category: 'Generator',
+    emoji: '👶',
+    image: '/tools/middle-name-generator.jpg',
+    imageAlt: 'Handwritten baby name list in a notebook with a pen',
+    primaryKeyword: 'middle name generator',
+    intro:
+      'Enter a first name and last name to get middle name suggestions that flow well phonetically. Filter by style — classic, modern, nature-inspired, or short. Each suggestion includes origin and meaning. Perfect for new parents, authors naming characters, or anyone looking for the right fit.',
+    howItWorks: [
+      { title: 'Enter first and last name', description: 'The generator uses syllable count and phonetic patterns to find names that flow naturally in between.' },
+      { title: 'Pick a style', description: 'Optional: classic, modern, nature, or short (1–2 syllables). Filter narrows suggestions to your vibe.' },
+      { title: 'Get suggestions with meanings', description: 'See middle name options with origin and meaning, ranked by phonetic flow.' },
+    ],
+    faqs: [
+      {
+        q: 'How do you choose a middle name that flows well?',
+        a: 'Alternate stressed syllables. If the first name ends with a stressed syllable (like "James"), pair it with a middle starting with an unstressed syllable. Avoid middle names that rhyme with the first or last name. Aim for different syllable counts than the first name.',
+      },
+      {
+        q: 'Should a middle name have a special meaning?',
+        a: 'Many parents use middle names to honor family members or cultural heritage. Others prioritize flow over meaning. Both are valid — the middle name is rarely used daily, so phonetic flow is pragmatic.',
+      },
+      {
+        q: 'Can I have two middle names?',
+        a: 'Yes. Two middle names are common in Spanish-speaking and British cultures. Just check the full name flows when said aloud quickly.',
+      },
+      {
+        q: 'Are one-syllable middle names a good choice?',
+        a: 'Yes — short middle names (Mae, Rose, James, Cole) are extremely popular. A three-syllable first name often pairs beautifully with a one-syllable middle: "Isabella Mae" or "Alexander James".',
+      },
+      {
+        q: 'How important are the initials combination?',
+        a: 'Worth checking. Initials like A.S.S. or D.I.E. can be embarrassing on monograms and luggage. Run the full initials before committing.',
+      },
+    ],
+    relatedSlugs: ['half-birthday-calculator', 'era-calculator'],
+    ctaHook: 'Running a baby brand or parenting blog? Pixie generates your website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'The history and culture of middle names',
+    about:
+      'Middle names are a relatively modern convention. In medieval Europe, most people had only one name. The practice expanded in the 16th century among Spanish and Portuguese nobility and spread through Germany, where the "Mittelname" became common in the 18th century. In the United States, middle names became near-universal by the 19th century, often used to preserve a mother\'s maiden surname or honor a godparent. Today, about 80% of Americans have a middle name. Middle names rarely appear in daily life — they show up on official documents, are invoked when a parent is very serious ("James Oliver Smith, come here!"), and appear on graduation diplomas. Despite rare use, middle names carry significant meaning as a vehicle for family history and cultural connection.',
+  },
+  {
+    slug: 'era-calculator',
+    title: 'ERA Calculator — Earned Run Average for Baseball',
+    h1: 'ERA Calculator',
+    shortName: 'ERA Calculator',
+    tagline: 'Calculate a pitcher\'s earned run average in seconds.',
+    metaDescription:
+      "Calculate a pitcher's earned run average instantly. Enter earned runs and innings pitched to get an accurate ERA. Free baseball ERA calculator, no signup.",
+    keywords: ['era calculator', 'earned run average calculator', 'baseball era calculator', 'how to calculate era', 'pitching era calculator'],
+    category: 'Calculator',
+    emoji: '⚾',
+    image: '/tools/era-calculator.jpg',
+    imageAlt: 'Baseball pitcher throwing from the mound during a game',
+    primaryKeyword: 'era calculator',
+    intro:
+      'Enter a pitcher\'s earned runs and innings pitched to get their exact earned run average (ERA) — the standard measure of pitching performance. Handles baseball innings notation (.1 = one out, .2 = two outs) automatically and rates the result from elite to high.',
+    howItWorks: [
+      { title: 'Enter earned runs', description: 'The number of earned runs charged to the pitcher (exclude unearned runs from errors).' },
+      { title: 'Enter innings pitched', description: 'Use standard notation — 6.1 means 6 innings and 1 out, 6.2 means 6 innings and 2 outs.' },
+      { title: 'Get the ERA', description: 'See the exact earned run average ((ER ÷ IP) × 9) plus a rating from elite to high.' },
+    ],
+    faqs: [
+      {
+        q: 'How do you calculate ERA?',
+        a: 'ERA = (earned runs ÷ innings pitched) × 9. The × 9 normalizes the rate to a standard nine-inning game. Example: 3 earned runs over 7 innings = (3 ÷ 7) × 9 = 3.86 ERA.',
+      },
+      {
+        q: 'What is a good ERA in baseball?',
+        a: 'Under 2.00 is elite (Cy Young territory), 2.00–3.00 is excellent, 3.00–4.00 is good, 4.00–5.00 is roughly league average, and above 5.00 has room to improve. League average in MLB usually sits around 4.00.',
+      },
+      {
+        q: 'What is the difference between earned and unearned runs?',
+        a: 'An earned run is one the pitcher is responsible for. A run that scores only because of a fielding error or passed ball is "unearned" and is excluded from ERA — so ERA reflects pitching, not the defense behind it.',
+      },
+      {
+        q: 'How do innings pitched (.1 and .2) work?',
+        a: 'The decimal in innings pitched counts outs, not tenths. 6.1 means 6 innings plus 1 out (6⅓), and 6.2 means 6 innings plus 2 outs (6⅔). This calculator converts that notation automatically.',
+      },
+      {
+        q: 'What is a perfect ERA?',
+        a: 'A 0.00 ERA means the pitcher has allowed no earned runs all season. It is common over small samples (a few relief innings) but extremely rare across a full starter\'s workload.',
+      },
+    ],
+    relatedSlugs: ['dunk-calculator', 'dots-calculator'],
+    ctaHook: 'Run a baseball academy, league, or sports blog? Pixie generates your website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'What ERA really measures in baseball',
+    about:
+      'Earned run average is the oldest and most widely cited measure of pitching performance, dating back to the early 20th century when relief pitching made win-loss records an unfair way to judge pitchers. ERA answers a simple question: how many earned runs does this pitcher give up per nine innings? Because it is a rate stat, it lets you compare a starter who throws 200 innings against a reliever who throws 60. The formula is ERA = (earned runs ÷ innings pitched) × 9. A sub-3.00 ERA across a full season is excellent; the all-time single-season record is Tim Keefe\'s 0.86 (1880), and in the modern era Bob Gibson\'s 1.12 (1968) stands out. ERA has limitations — it depends on the defense behind the pitcher and on official-scorer error judgments — which is why analysts also use FIP and ERA+. But for a fast, intuitive read on how a pitcher is performing, ERA remains the number everyone checks first.',
+  },
+  {
+    slug: 'uma-affinity-calculator',
+    title: 'Uma Affinity Calculator — Best Breeding Pairs',
+    h1: 'Uma Musume Affinity Calculator',
+    shortName: 'Uma Affinity Calculator',
+    tagline: 'Check breeding compatibility before you pick inherit parents.',
+    metaDescription:
+      'Find the best parent pairs in Uma Musume before you breed. Check affinity and compatibility scores between two Umas in one click. Free, no signup.',
+    keywords: ['uma affinity calculator', 'uma musume affinity', 'uma musume breeding', 'uma musume inherit pairs', 'pretty derby affinity'],
+    category: 'Calculator',
+    emoji: '🐴',
+    image: '/tools/uma-affinity-calculator.jpg',
+    imageAlt: 'Colorful anime-style characters in racing uniforms',
+    primaryKeyword: 'uma affinity calculator',
+    intro:
+      'Estimate the breeding affinity (相性) between two parent Umas before you commit to an inherit pair in Uma Musume Pretty Derby. Enter their shared race wins, relationship, and shared aptitudes to get a compatibility score and the ◎/○/△/✕ rating that drives better stat and skill inheritance.',
+    howItWorks: [
+      { title: 'Enter shared race wins', description: 'Count the major (G1) races BOTH parents have won — the single biggest affinity driver.' },
+      { title: 'Set the relationship', description: 'Pick whether the two parents share a character line or rival relationship, plus shared distance/style aptitudes.' },
+      { title: 'Get the affinity rating', description: 'See a 0–100 compatibility score and the ◎/○/△/✕ symbol so you can pick the strongest inherit pair.' },
+    ],
+    faqs: [
+      {
+        q: 'What is breeding affinity (相性) in Uma Musume?',
+        a: 'Affinity is the compatibility between your trainee and its two parents — and between the two parents themselves. Higher affinity raises stat gains and the chance that inherited "factors" (sparks) activate, so a good inherit pair is the foundation of a strong Uma.',
+      },
+      {
+        q: 'How do you increase breeding affinity?',
+        a: 'The biggest driver is shared major (G1) race wins between the two parents. Character relationships (same line or rival pairs) add a fixed bonus, and shared distance/running-style aptitudes help too. Stack these and the pair moves toward the ◎ rating.',
+      },
+      {
+        q: 'What does the ◎ affinity rating mean?',
+        a: 'The game shows affinity as ◎ (best), ○ (good), △ (fair), or ✕ (poor). ◎ between all three relationships (trainee–parent1, trainee–parent2, parent1–parent2) gives the strongest inheritance — that is what you aim for when picking parents.',
+      },
+      {
+        q: 'How accurate is this affinity calculator?',
+        a: 'It estimates affinity from its main public drivers — shared race wins, parent relationship, and shared aptitudes. The game also adds fixed per-character relationship values from an internal table, so treat the score as a strong guide for choosing inherit pairs rather than an exact in-game number.',
+      },
+      {
+        q: 'Why do inherit pairs matter so much?',
+        a: 'Better affinity means more of the parents\' blue (stat) and pink (aptitude) factors carry over, plus higher base stat gains. Over multiple generations, consistently breeding high-affinity ◎ pairs is how players build the powerful inherited factors needed for top-tier Umas.',
+      },
+    ],
+    relatedSlugs: ['dots-calculator', 'midpoint-calculator'],
+    ctaHook: 'Running a gaming blog or esports brand? Pixie generates your website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How breeding affinity works in Uma Musume',
+    about:
+      'In Uma Musume Pretty Derby, every trained Uma can be used as a parent to pass inherited "factors" (sparks) to the next trainee. How much carries over depends on affinity — the compatibility score between the trainee and each parent, and between the two parents themselves. The game evaluates three relationships and rates each ◎/○/△/✕. Affinity is driven mainly by shared major race wins (when both parents won the same G1 races), fixed character relationships (same series, rival pairs, or story links), and shared aptitudes. A ◎/◎/◎ pairing maximizes both base stat inheritance and the activation rate of blue (stat) and pink (aptitude) factors, which is why experienced players plan inherit pairs carefully across generations rather than breeding at random. This calculator estimates that affinity from its main public drivers so you can compare candidate parent pairs before committing a breeding slot — the exact in-game value also includes Cygames\' internal per-character relationship table.',
+  },
+  {
+    slug: 'fancy-text-generator',
+    title: 'Fancy Text Generator — Cool Fonts to Copy',
+    h1: 'Fancy Text Generator',
+    shortName: 'Fancy Text Generator',
+    tagline: 'Turn plain text into dozens of cool fonts you can copy and paste anywhere.',
+    metaDescription:
+      'Turn plain text into 100+ cool fancy fonts you can copy and paste into Instagram, TikTok, and bios. Free fancy text generator, no signup needed.',
+    keywords: ['fancy text generator', 'cool text generator', 'text fonts', 'font generator', 'cool fonts copy and paste', 'stylish text'],
+    category: 'Generator',
+    emoji: '✨',
+    image: '/tools/fancy-text-generator.jpg',
+    imageAlt: 'Colorful neon typography and lettering on a dark wall',
+    primaryKeyword: 'fancy text generator',
+    intro:
+      'Type your text once and instantly get dozens of fancy font styles — bold, italic, cursive script, gothic fraktur, double-struck outline, small caps and more. Every style is made of real Unicode characters, so you can copy and paste them straight into Instagram bios, TikTok captions, Discord, Twitter/X, or anywhere else that accepts plain text. No app, no signup, no images — just tap copy.',
+    howItWorks: [
+      { title: 'Type your text', description: 'Enter any word, name, or sentence in the box. Every style updates live as you type.' },
+      { title: 'Pick a style', description: 'Scroll the list of fancy fonts — bold, script, cursive, gothic, outline, small caps and more.' },
+      { title: 'Copy & paste', description: 'Tap copy on the style you like and paste it anywhere — bios, captions, usernames, chats.' },
+    ],
+    faqs: [
+      {
+        q: 'How does a fancy text generator work?',
+        a: 'It does not really change the font — it swaps each letter for a look-alike Unicode character (like 𝐛𝐨𝐥𝐝 or 𝓼𝓬𝓻𝓲𝓹𝓽). Because these are standard characters, they keep their styled look when you paste them anywhere, even where custom fonts are not allowed.',
+      },
+      {
+        q: 'Where can I paste fancy text?',
+        a: 'Anywhere that accepts text: Instagram and TikTok bios and captions, Twitter/X, Facebook, Discord, YouTube comments, WhatsApp, and most usernames. A few apps strip unusual characters, so paste and check before posting.',
+      },
+      {
+        q: 'Is the fancy text free to use?',
+        a: 'Yes — it is completely free, with no signup and no limits. The characters are part of the Unicode standard, so you can use them in personal and commercial posts.',
+      },
+      {
+        q: 'Why do some letters look like a plain box?',
+        a: 'A box (▯) means the device or app you pasted into does not have a glyph for that character. Try a different style — sans-serif, bold, and italic are the most widely supported across phones and browsers.',
+      },
+      {
+        q: 'Will fancy text hurt my SEO or accessibility?',
+        a: 'Avoid it for important on-page content. Screen readers can mispronounce styled Unicode, and search engines may not index it well. Use it for decorative bios and captions, not your headlines or body copy.',
+      },
+    ],
+    relatedSlugs: ['bold-text-generator', 'glitch-text-generator', 'tiny-text-generator'],
+    ctaHook: 'Building a creator or personal brand? Pixie builds your full site — shop, links, content — in 60 seconds. Text us on WhatsApp.',
+    aboutHeading: 'How fancy fonts and Unicode text styles actually work',
+    about:
+      'A "fancy text generator" does not install a font — it maps each character you type to a different code point in the Unicode standard. Unicode includes whole alphabets of styled letters in its Mathematical Alphanumeric Symbols block: bold (𝐀–𝐳), italic (𝐴–𝑧), bold-italic, script/cursive (𝒜–𝓏), fraktur/gothic (𝔄–𝔷), double-struck/outline (𝔸–𝕫), sans-serif, monospace and more. There are also enclosed alphanumerics (Ⓐ, ⓐ), full-width forms (Ａ, ａ) used in CJK typography, and phonetic small caps (ᴀ, ʙ, ᴄ). Because these are genuine characters rather than formatting, they survive copy-paste into apps that strip styling — which is exactly why they are popular for Instagram and TikTok bios, Discord names, and aesthetic captions. The trade-offs are worth knowing: not every device ships a glyph for every style (you may see a placeholder box), some platforms filter unusual characters out of usernames, and assistive technology can read styled letters incorrectly or skip them entirely. For that reason, fancy text is best used sparingly and decoratively — a stylized name or a highlight word — rather than for the main, meaningful text people and search engines need to read. This generator renders the most widely supported styles first and lets you copy any one with a single tap, so you can experiment, paste, and keep whatever looks right on your platform of choice.',
+  },
+  {
+    slug: 'glitch-text-generator',
+    title: 'Glitch Text Generator — Make Zalgo Text Free',
+    h1: 'Glitch Text Generator',
+    shortName: 'Glitch Text Generator',
+    tagline: 'Create creepy zalgo and cursed glitch text with an adjustable intensity.',
+    metaDescription:
+      'Create creepy, distorted glitch text and copy it into chats, videos, or posts. Free glitch text generator with adjustable Zalgo intensity. No signup.',
+    keywords: ['glitch text generator', 'zalgo text generator', 'cursed text generator', 'zalgo text', 'glitch text', 'creepy text'],
+    category: 'Generator',
+    emoji: '👾',
+    image: '/tools/glitch-text-generator.jpg',
+    imageAlt: 'Blurred, distorted black-and-white portrait',
+    primaryKeyword: 'glitch text generator',
+    intro:
+      'Turn normal text into glitchy, corrupted "zalgo" text dripping with combining marks. Use the intensity slider to go from a subtle creepy wobble to fully cursed chaos, then hit re-roll for a fresh distortion and copy the result into Discord, Instagram, Twitter/X, or your next horror-themed post. Every character is standard Unicode, so it pastes anywhere that accepts text.',
+    howItWorks: [
+      { title: 'Type your text', description: 'Enter the word or phrase you want to corrupt in the input box.' },
+      { title: 'Set the intensity', description: 'Drag the slider for more or fewer combining marks above, through, and below each letter.' },
+      { title: 'Re-roll & copy', description: 'Hit re-roll for a new random glitch, then copy and paste it anywhere.' },
+    ],
+    faqs: [
+      {
+        q: 'What is zalgo or glitch text?',
+        a: 'Zalgo text stacks lots of Unicode "combining marks" (accents and diacritics) onto normal letters. The marks pile up above and below each character, creating the corrupted, glitchy, "cursed" look that spills out of the line.',
+      },
+      {
+        q: 'Why does my glitch text look less intense after pasting?',
+        a: 'Many apps cap how many combining marks they render per character for safety and performance. If your destination tames the effect, lower the intensity slightly so it looks intentional rather than clipped.',
+      },
+      {
+        q: 'Where can I use glitch text?',
+        a: 'Discord, Instagram, TikTok, Twitter/X, and most chat apps. Some platforms limit or filter heavy combining marks in usernames, so test before you rely on it there.',
+      },
+      {
+        q: 'Is glitch text safe to copy and paste?',
+        a: 'Yes. It is just ordinary Unicode characters — there is no code or script involved. Extremely heavy zalgo can briefly lag older apps when rendering, but it cannot harm your device.',
+      },
+      {
+        q: 'Can I make subtle glitch text instead of full chaos?',
+        a: 'Absolutely. Set the intensity slider low for a light, eerie distortion that stays readable, or crank it up for the classic over-the-top cursed effect.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'strikethrough-text-generator', 'upside-down-text-generator'],
+    ctaHook: 'Run a gaming, streaming, or horror brand? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'The Unicode behind zalgo and cursed text',
+    about:
+      'Glitch or "zalgo" text relies on a quiet feature of Unicode: combining characters. A combining mark (code points roughly U+0300 to U+036F) has no width of its own — it attaches to the character before it. Normally that is how languages stack accents, like the marks in "café" or Vietnamese tone marks. Zalgo abuses the mechanism by attaching many marks to a single base letter: combiners that render above the glyph, ones that render through the middle, and ones that render below. Pile on enough and the text appears to melt, drip, and overflow its line — the signature corrupted look named after an internet horror meme. Because the result is built entirely from valid Unicode, it copies and pastes like any other text and needs no special font. There are practical limits, though. To protect performance and prevent abuse, many platforms normalize text or cap the number of combining marks they will render per base character, so an extreme glitch can look milder once pasted into Discord, iMessage, or a browser. Usernames are the strictest surface and often reject heavy combiners outright. This generator gives you an intensity slider so you can dial the chaos to match where it is going — a faint, unsettling shimmer for a caption, or a fully cursed wall for a horror post — plus a re-roll button that randomizes which marks land where, so no two generations look exactly alike. It is a fun, harmless typographic effect; just keep it out of anything that needs to stay cleanly readable or accessible.',
+  },
+  {
+    slug: 'heart-symbol-generator',
+    title: 'Heart Symbol Generator — Copy Heart Symbols & Emojis',
+    h1: 'Heart Symbol Generator',
+    shortName: 'Heart Symbol Generator',
+    tagline: 'Tap to copy hearts, stars, and aesthetic text symbols for any platform.',
+    metaDescription:
+      'Browse every heart symbol and heart emoji, then tap to copy and paste anywhere. Free heart symbol generator for messages, bios, and posts. No signup.',
+    keywords: ['heart symbol text', 'heart text symbol', 'text symbols', 'heart symbol copy and paste', 'text emojis', 'aesthetic symbols'],
+    category: 'Generator',
+    emoji: '💕',
+    image: '/tools/heart-symbol-generator.jpg',
+    imageAlt: 'Soft pink hearts and decorative symbols on a pastel background',
+    primaryKeyword: 'heart symbol text',
+    intro:
+      'A tap-to-copy palette of heart symbols (♥ ♡ ❤ 💕), stars, sparkles, flowers, and aesthetic text symbols you can paste anywhere — Instagram and TikTok bios, WhatsApp, Discord, usernames, and captions. Want a quick decoration? Use the builder to wrap your name or text in the heart of your choice and copy the whole thing in one click. No keyboard shortcuts to memorize.',
+    howItWorks: [
+      { title: 'Browse the symbols', description: 'Scroll grouped palettes of hearts, stars, flowers, and decorative symbols.' },
+      { title: 'Tap to copy', description: 'Click any symbol to copy it instantly — then paste it wherever you like.' },
+      { title: 'Or wrap your text', description: 'Pick a heart, type your name, and copy your text wrapped in matching symbols.' },
+    ],
+    faqs: [
+      {
+        q: 'How do I type a heart symbol without emoji?',
+        a: 'Use the text heart characters ♥ (solid) or ♡ (outline) from the palette above — just tap to copy. Unlike the 💕 emoji, these are monochrome text symbols that take on your text colour.',
+      },
+      {
+        q: 'What is the difference between a heart symbol and a heart emoji?',
+        a: 'A heart emoji (❤️, 💖) is a colour pictograph that looks different on each device. A heart text symbol (♥, ♡) is a single character that inherits your font colour and size, so it blends into text and usernames more cleanly.',
+      },
+      {
+        q: 'Where can I paste these symbols?',
+        a: 'Instagram, TikTok, WhatsApp, Discord, Twitter/X, YouTube, and most usernames and bios. They are standard Unicode characters, so they work almost everywhere text is allowed.',
+      },
+      {
+        q: 'Can I use these symbols in my username?',
+        a: 'Often yes, but it depends on the platform. Many allow ♥ and ★ in display names; some restrict symbols in handles. Paste and save to check whether your platform accepts it.',
+      },
+      {
+        q: 'Are these symbols free to use?',
+        a: 'Yes. They are part of Unicode and free for personal and commercial use — no attribution, signup, or limits.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'tiny-text-generator', 'bold-text-generator'],
+    ctaHook: 'Run a shop or creator brand? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Heart symbols, text symbols, and how copy-paste characters work',
+    about:
+      'Text symbols like ♥, ★, ✿, and ➳ are single Unicode characters — not images and not emoji. That distinction matters. An emoji such as 💖 is rendered by your operating system as a small colour picture that looks different on iPhone, Android, Windows, and each app. A text symbol such as ♥ is a monochrome glyph that behaves like a letter: it takes your current font, colour, and size, and it sits neatly inline with the rest of your text. That is why aesthetic bios and usernames lean on text symbols — they look consistent and tidy across platforms in a way emoji cannot. These characters come from a handful of Unicode blocks: Miscellaneous Symbols (hearts, stars, suits), Dingbats (decorative florals, arrows, check marks, snowflakes), and various arrow and geometric ranges. Because they are standard characters, copying one and pasting it into Instagram, TikTok, WhatsApp, Discord, or a document just works almost everywhere — no special keyboard, shortcut codes, or app required. The main caveat is usernames and handles: some platforms allow symbols in display names but restrict them in the unique handle, and a few strip non-letter characters entirely, so it is worth pasting and saving to confirm. This tool gives you a click-to-copy palette grouped by theme — hearts, stars and sparkles, flowers and nature, and a grab-bag of arrows and decorative marks — plus a small builder that wraps your name or phrase in the heart symbol of your choice so you can copy a finished, decorated string in one tap. Everything here is free Unicode you can reuse however you like.',
+  },
+  {
+    slug: 'tiny-text-generator',
+    title: 'Tiny Text Generator — Small Caps & Superscript',
+    h1: 'Tiny Text Generator',
+    shortName: 'Tiny Text Generator',
+    tagline: 'Shrink your words into tiny superscript, subscript, and small-caps text.',
+    metaDescription:
+      'Turn text into tiny letters — small caps, superscript, and subscript — then copy it into bios and chats. Free tiny text generator, no signup.',
+    keywords: ['tiny text generator', 'small text', 'small text generator', 'tiny text copy and paste', 'small caps generator', 'mini text'],
+    category: 'Generator',
+    emoji: '🔡',
+    image: '/tools/tiny-text-generator.jpg',
+    imageAlt: 'Drawers of vintage metal letterpress type',
+    primaryKeyword: 'tiny text generator',
+    intro:
+      'Convert your text into tiny letters using real Unicode characters — superscript (ᵗⁱⁿʸ), subscript (ₜᵢₙᵧ), and small caps (ᴛɪɴʏ). Type once and copy whichever small style fits your Instagram or TikTok bio, caption, or username. No images and no formatting tricks — just small, copy-paste-ready text that works almost anywhere.',
+    howItWorks: [
+      { title: 'Type your text', description: 'Enter any word or phrase. All three tiny styles update as you type.' },
+      { title: 'Choose a style', description: 'Pick superscript, subscript, or small caps depending on the look you want.' },
+      { title: 'Copy & paste', description: 'Tap copy and paste the small text into your bio, caption, or username.' },
+    ],
+    faqs: [
+      {
+        q: 'How does a tiny text generator work?',
+        a: 'It replaces your normal letters with smaller Unicode look-alikes — superscript, subscript, and small-capital characters. Because these are real characters, the tiny look survives copy-paste, even in apps that do not let you change font size.',
+      },
+      {
+        q: 'Why are some tiny letters missing or full-size?',
+        a: 'Unicode does not have a small version of every letter. Subscript in particular is missing many letters, so unsupported characters stay full size. Superscript and small caps cover more of the alphabet.',
+      },
+      {
+        q: 'Where can I use tiny text?',
+        a: 'Instagram and TikTok bios and captions, Twitter/X, Discord, and many usernames. As always, paste and preview first — a few platforms normalize or strip unusual characters.',
+      },
+      {
+        q: 'Is tiny text bad for accessibility?',
+        a: 'It can be. Screen readers may skip or mispronounce superscript and small-caps characters, so keep tiny text decorative and avoid it for information people actually need to read.',
+      },
+      {
+        q: 'Is the tiny text generator free?',
+        a: 'Yes, completely free with no signup or limits. The characters are standard Unicode, free for personal and commercial use.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'bold-text-generator', 'heart-symbol-generator'],
+    ctaHook: 'Building a personal brand or creator page? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How tiny text is made from Unicode',
+    about:
+      'Tiny text is not a smaller font size — it is a set of genuinely smaller characters that already exist in Unicode. Three families do most of the work. Superscript characters (the small raised letters and digits used in footnotes and maths, like ⁿ and ²) give you a compact, slightly-above-the-line look. Subscript characters (the small lowered letters and digits used in chemistry, like the 2 in H₂O) give a similar shrunk look sitting on the baseline, though Unicode only defines a limited set of subscript letters, so several letters of the alphabet have no subscript form and will appear full size. Small capitals (ᴀ, ʙ, ᴄ — borrowed from the phonetic alphabet) fold every letter to a uniform petite capital and tend to look the most polished for names and bios. Because all three are ordinary characters rather than styling, the tiny effect is preserved when you copy and paste into places that do not let you resize text at all, which is exactly why people use them for Instagram and TikTok bios, aesthetic captions, and compact usernames. The same caveats apply as with any decorative Unicode: not every device has a glyph for every small character, some platforms normalize text and may convert it back to full size, and assistive technology can read these characters incorrectly or skip them. The practical advice is to keep tiny text for decoration — a stylized handle or a quiet sub-line — and to keep the important, meaningful words in normal text so everyone, including screen readers and search engines, can read them. This generator shows all three tiny styles at once so you can compare and copy whichever one renders best where you are pasting it.',
+  },
+  {
+    slug: 'upside-down-text-generator',
+    title: 'Upside Down Text Generator — Flip Text Free',
+    h1: 'Upside Down Text Generator',
+    shortName: 'Upside Down Text Generator',
+    tagline: 'Flip your text upside down to copy and paste anywhere.',
+    metaDescription:
+      'Flip any sentence upside down and copy the mirrored text into chats, bios, and posts. Free upside down text generator — instant, no signup.',
+    keywords: ['upside down text', 'upside down text generator', 'flip text', 'reverse text', 'flip text generator', 'text flipper'],
+    category: 'Generator',
+    emoji: '🙃',
+    image: '/tools/upside-down-text-generator.jpg',
+    imageAlt: 'A child hanging upside down',
+    primaryKeyword: 'upside down text generator',
+    intro:
+      'Flip your text completely upside down — uʍop ǝpᴉsdn — using look-alike Unicode characters, then copy and paste it into Instagram, TikTok, Twitter/X, Discord, or a text message for a fun, attention-grabbing effect. It works on letters, numbers, and common punctuation, and reverses the order so the whole sentence reads as if it were turned 180°.',
+    howItWorks: [
+      { title: 'Type your text', description: 'Enter any word or sentence in the box.' },
+      { title: 'See it flip', description: 'Your text is mapped to upside-down characters and reversed automatically.' },
+      { title: 'Copy & paste', description: 'Tap copy and paste the flipped text anywhere you like.' },
+    ],
+    faqs: [
+      {
+        q: 'How does upside down text work?',
+        a: 'Each letter is swapped for a Unicode character that looks like the original turned 180° (for example a → ɐ, e → ǝ), and the whole string is reversed so it reads correctly when flipped. It is not an image — it is real, copy-paste-ready text.',
+      },
+      {
+        q: 'Where can I paste upside down text?',
+        a: 'Instagram, TikTok, Twitter/X, Facebook, Discord, WhatsApp, and most text fields. A few platforms strip unusual characters from usernames, so test there before relying on it.',
+      },
+      {
+        q: 'Why do a few characters not flip?',
+        a: 'Unicode does not have an upside-down look-alike for every symbol. Unsupported characters are left as-is, so an occasional letter or symbol may appear normal in the flipped output.',
+      },
+      {
+        q: 'Can I flip numbers too?',
+        a: 'Yes — digits are mapped to their closest upside-down forms (for example 3 → Ɛ, 4 → ㄣ), so phone-number-style strings and dates flip along with your words.',
+      },
+      {
+        q: 'Is the upside down text generator free?',
+        a: 'Completely free, no signup or limits. The flipped characters are standard Unicode and free to use in personal and commercial posts.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'glitch-text-generator', 'strikethrough-text-generator'],
+    ctaHook: 'Run a creator or fun brand? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How flipping text upside down works',
+    about:
+      'Upside down text is a clever bit of Unicode substitution. There is no single switch that rotates text, so a flipper does two things at once. First, it replaces each character with a different Unicode character that happens to look like the original rotated 180 degrees. Some of these are intuitive — the letter "n" upside down looks like "u", and "p" looks like "d" — while others borrow glyphs from completely unrelated scripts and symbol sets to find a convincing match (for example, the turned "a" ɐ, turned "e" ǝ, and turned capital "A" ∀ come from phonetic and mathematical ranges). Second, it reverses the order of the characters, because when you physically flip a line of text the last letter ends up on the left. Combine the two steps and the result reads naturally when the page — or the reader — is turned over. Because the output is built from ordinary characters, it copies and pastes anywhere text is accepted and needs no special font, which is why it is a staple of playful Instagram and TikTok captions, novelty usernames, and surprise messages. The limitations are the same as with other Unicode tricks: not every glyph has a good upside-down counterpart, so a stray character may stay upright; some platforms normalize or reject unusual characters in handles; and screen readers will not interpret the flipped text the way a human eye does, so it should stay decorative. This generator handles letters, digits, and the most common punctuation, mapping and reversing your text instantly so you can copy a perfectly flipped string with a single tap.',
+  },
+  {
+    slug: 'invisible-text-generator',
+    title: 'Invisible Text Generator — Blank Spaces Free',
+    h1: 'Invisible Text Generator',
+    shortName: 'Invisible Text Generator',
+    tagline: 'Copy invisible blank characters for empty messages, names, and bios.',
+    metaDescription:
+      'Copy invisible characters and blank spaces for empty usernames, messages, and bios. Free invisible text generator that works anywhere. No signup.',
+    keywords: ['invisible text', 'blank text copy paste', 'invisible character', 'empty character', 'blank space copy paste', 'invisible text generator'],
+    category: 'Generator',
+    emoji: '👻',
+    image: '/tools/invisible-text-generator.jpg',
+    imageAlt: 'A blank white sheet of paper on a wooden table',
+    primaryKeyword: 'invisible text',
+    intro:
+      'Generate and copy invisible blank characters — text that looks completely empty but is actually there. Use it to send a "blank" message, set an empty username or bio, leave a hidden space, or separate elements where a normal space gets trimmed. Pick how many invisible characters you need and copy them in one tap.',
+    howItWorks: [
+      { title: 'Choose how many', description: 'Use the slider to pick how many invisible characters you want to copy.' },
+      { title: 'Copy the blank text', description: 'Tap copy — it looks like nothing was copied, but the invisible characters are on your clipboard.' },
+      { title: 'Paste anywhere', description: 'Paste into a username, bio, message, or form field that needs to look empty.' },
+    ],
+    faqs: [
+      {
+        q: 'What is an invisible character?',
+        a: 'It is a real Unicode character that renders with no visible mark — like a blank space that most apps will not trim. This tool uses the Hangul Filler (U+3164), which behaves like a real character so it survives in places that strip ordinary spaces.',
+      },
+      {
+        q: 'How do I send a blank message?',
+        a: 'Copy one or more invisible characters here, paste them into your chat box, and send. The message looks empty but contains the invisible characters, so the app accepts it as non-empty.',
+      },
+      {
+        q: 'Can I set an invisible username or bio?',
+        a: 'On many platforms, yes — paste the invisible characters where the name or bio goes. Some apps reject blank-looking input or normalize it, so if it does not save, try copying a few more characters.',
+      },
+      {
+        q: 'Why did my invisible text disappear after pasting?',
+        a: 'Some platforms strip or collapse blank characters for safety. If that happens, copy a larger batch, or the destination simply does not allow invisible input.',
+      },
+      {
+        q: 'Is invisible text safe to use?',
+        a: 'Yes — it is just a standard Unicode character with no code attached. It cannot harm your device or account; it simply takes up space without showing anything.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'tiny-text-generator', 'heart-symbol-generator'],
+    ctaHook: 'Need a real website, not just a blank space? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How invisible characters and blank text work',
+    about:
+      'Invisible text is exactly what it sounds like: characters that occupy space but render nothing you can see. The everyday space bar produces U+0020, an ordinary space — but apps love to trim leading, trailing, and repeated spaces, so a "blank" built from normal spaces often collapses to nothing or is rejected as empty. The trick is to use characters that look blank yet behave like ordinary letters so they are not trimmed. There are several candidates in Unicode: the zero-width space (U+200B) which truly has no width, various fixed-width spaces, and the Hangul Filler (U+3164), a character originally meant as a placeholder in Korean text that most systems treat as a normal visible-width-but-blank character. This tool uses the Hangul Filler because it is the most reliable across chat apps, profiles, and games — it usually survives where a zero-width space would be stripped. People reach for invisible characters for a handful of practical reasons: sending a message that appears empty, setting a blank-looking username or display name, leaving an empty line where an app trims whitespace, or nudging layout in bios and forms. The behaviour is never guaranteed, though, because platforms increasingly normalize input to fight spam and impersonation — some collapse blank characters, some reject blank-looking names outright, and some allow them in one field but not another. That is why this generator lets you copy a single character or a whole batch at once: if one does not stick, a longer run sometimes does. It is a harmless typographic curiosity — just standard Unicode on your clipboard — useful whenever you need something that is present to the computer but invisible to the eye.',
+  },
+  {
+    slug: 'bold-text-generator',
+    title: 'Bold Text Generator — Copy Bold Unicode Text',
+    h1: 'Bold Text Generator',
+    shortName: 'Bold Text Generator',
+    tagline: 'Make real bold text that stays bold when you copy and paste it.',
+    metaDescription:
+      'Turn plain text into bold Unicode you can paste into Instagram, LinkedIn, and bios. Free bold text generator — no formatting menus, just copy and paste.',
+    keywords: ['bold text', 'bold text generator', 'bold font copy and paste', 'bold text for instagram', 'bold letters', 'bold unicode'],
+    category: 'Generator',
+    emoji: '🅱️',
+    image: '/tools/bold-text-generator.jpg',
+    imageAlt: 'Bold block lettering on a billboard against a brick wall',
+    primaryKeyword: 'bold text',
+    intro:
+      'Make genuine bold text that keeps its weight wherever you paste it — even in apps with no formatting button. Type once and copy from several bold styles: classic serif bold (𝐛𝐨𝐥𝐝), bold italic, bold sans-serif, and bold script. Perfect for Instagram and LinkedIn posts, Facebook, Twitter/X, and Discord where you cannot otherwise format text.',
+    howItWorks: [
+      { title: 'Type your text', description: 'Enter the words you want in bold. Every bold style previews live.' },
+      { title: 'Pick a bold style', description: 'Choose serif bold, bold italic, bold sans, or bold script.' },
+      { title: 'Copy & paste', description: 'Tap copy and paste bold text into posts, bios, headlines, and chats.' },
+    ],
+    faqs: [
+      {
+        q: 'How can text stay bold where there is no formatting?',
+        a: 'This tool uses Unicode bold characters (𝐀–𝐳) rather than rich-text formatting. Because the bold look is built into the characters themselves, it survives in plain-text fields like Instagram captions and LinkedIn posts that have no bold button.',
+      },
+      {
+        q: 'Is bold text good for LinkedIn and Instagram posts?',
+        a: 'Used sparingly, yes — a bold opening line or key phrase draws the eye. Avoid bolding whole paragraphs: it hurts readability and can be mispronounced or skipped by screen readers.',
+      },
+      {
+        q: 'Why does my bold text show as boxes on some phones?',
+        a: 'A box means that device lacks a glyph for those bold characters. Bold sans-serif and serif bold are the most widely supported; switch styles if one is not rendering.',
+      },
+      {
+        q: 'Will bold Unicode hurt my accessibility or SEO?',
+        a: 'It can. Screen readers may read bold Unicode letter-by-letter or skip them, and search engines may not index them well. Keep it decorative — never use it for headings or important body text.',
+      },
+      {
+        q: 'Is the bold text generator free?',
+        a: 'Yes — free, no signup, no limits. Unicode bold characters are free to use in personal and commercial content.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'strikethrough-text-generator', 'tiny-text-generator'],
+    ctaHook: 'Posting to grow a brand? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Why Unicode bold text works in plain-text apps',
+    about:
+      'Most social platforms give you a plain-text box with no bold button — Instagram captions, LinkedIn posts, Twitter/X, Facebook, and Discord all store what you type as unformatted text. A bold text generator gets around that by not using formatting at all. Instead, it swaps each letter for a pre-bolded character from Unicode\'s Mathematical Alphanumeric Symbols block, which contains complete bold alphabets in several styles: bold serif (𝐀–𝐳 and digits 𝟎–𝟗), bold italic, bold sans-serif (𝗔–𝘇), bold sans-serif italic, and bold script/cursive (𝓐–𝔃). Since the heaviness lives in the characters themselves rather than in a style attribute, it is preserved when the text is copied and pasted into a field that otherwise cannot bold anything. That makes it a popular way to add a strong opening line, highlight a key phrase, or make a heading stand out in a feed. The trade-offs are important to respect. Not every device ships glyphs for every bold style, so a reader on an older phone might see placeholder boxes — bold sans-serif and bold serif have the widest support. More importantly, these are decorative substitutions, not semantic emphasis: assistive technologies often read mathematical bold characters one letter at a time, pronounce them oddly, or skip them, and search engines may fail to index them as normal words. The right approach is to use bold Unicode for emphasis and flair on a word or a line, while keeping your actual headings, links, and core message in ordinary text so everyone can read it and platforms can understand it. This generator previews each bold style side by side so you can copy whichever one looks best where you are posting.',
+  },
+  {
+    slug: 'strikethrough-text-generator',
+    title: 'Strikethrough Text Generator — Cross Text Out',
+    h1: 'Strikethrough Text Generator',
+    shortName: 'Strikethrough Text Generator',
+    tagline: 'Cross out your text with strikethrough, slash, and underline styles.',
+    metaDescription:
+      'Cross out text with a line through it and paste it into chats, bios, and posts. Free strikethrough text generator — copy struck-through text, no signup.',
+    keywords: ['strikethrough text', 'strikethrough text generator', 'cross out text', 'strikethrough copy and paste', 'crossed out text', 'underline text'],
+    category: 'Generator',
+    emoji: '🚫',
+    image: '/tools/strikethrough-text-generator.jpg',
+    imageAlt: 'A hand marking white paper with a red pen',
+    primaryKeyword: 'strikethrough text',
+    intro:
+      'Cross out your text using Unicode combining marks so the line stays attached even in apps with no formatting. Type once and copy three styles: classic strikethrough (s̶t̶r̶i̶k̶e̶), a slashed look, and underline. Great for to-do lists, price drops, jokes, and edits on Instagram, WhatsApp, Discord, and Twitter/X.',
+    howItWorks: [
+      { title: 'Type your text', description: 'Enter the words you want to cross out.' },
+      { title: 'Pick a style', description: 'Choose strikethrough, slashed, or underline — each previews live.' },
+      { title: 'Copy & paste', description: 'Tap copy and paste the crossed-out text anywhere.' },
+    ],
+    faqs: [
+      {
+        q: 'How does strikethrough text work without formatting?',
+        a: 'It adds a Unicode "combining" mark after each character — a line that renders through or under the letter. Because the line is part of the text, the strikethrough survives copy-paste into plain-text apps that have no formatting toolbar.',
+      },
+      {
+        q: 'Where can I use strikethrough text?',
+        a: 'Instagram, Twitter/X, Discord, and many other text fields. Note that some apps (like WhatsApp) already have their own ~strikethrough~ shortcut; the Unicode version works where that shortcut does not.',
+      },
+      {
+        q: 'Why does the line look slightly off on some devices?',
+        a: 'Combining marks are positioned by each font, so the exact placement of the line varies a little between devices and apps. The effect stays clearly readable as crossed-out text everywhere it renders.',
+      },
+      {
+        q: 'Is strikethrough text accessible?',
+        a: 'Not very. Screen readers may read the combining marks oddly or ignore them, so the "crossed out" meaning can be lost. Use it decoratively and do not rely on it to convey essential meaning.',
+      },
+      {
+        q: 'Is the strikethrough generator free?',
+        a: 'Yes — free, no signup, no limits. The combining marks are standard Unicode and free to use anywhere.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'bold-text-generator', 'glitch-text-generator'],
+    ctaHook: 'Running a store with price drops to show off? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How strikethrough and overline text are built',
+    about:
+      'Strikethrough you can copy and paste is made the same way as glitch text — with Unicode combining marks — just used tastefully. A combining mark is a zero-width character that attaches to the character before it; instead of stacking many for a corrupted look, a strikethrough tool adds exactly one line-style mark after each letter. The long stroke overlay (U+0336) draws a line straight through the middle of the character for the classic crossed-out effect; the short solidus overlay (U+0337) gives a slashed look; and the combining low line (U+0332) sits beneath the character for a continuous underline. Because the mark is part of the text rather than a formatting attribute, the line travels with the characters wherever they go, which is why it works in plain-text fields — Instagram captions, Discord messages, Twitter/X, and forms — that offer no strikethrough button. People use it for to-do lists where an item is done, for showing an old price next to a new one, for edits and corrections, and for the comedic "I said too much" effect. A few things are worth knowing. Each font decides exactly where a combining mark lands, so the line can sit a hair high or low depending on the device, though it stays clearly legible as a strike. Spaces are usually left unmarked so the line breaks naturally between words. And, as with all decorative Unicode, accessibility suffers: a screen reader may not announce that text is struck through, so never depend on strikethrough alone to carry meaning that a reader must not miss. Some apps — WhatsApp and Telegram, for instance — already support their own native strikethrough via markup like tildes; this tool is most useful precisely where that native option does not exist. It previews all three line styles at once so you can copy whichever renders best in your destination.',
+  },
+  {
+    slug: 'text-summarizer',
+    title: 'Free Text Summarizer — Summarize Any Text',
+    h1: 'AI Text Summarizer',
+    shortName: 'Text Summarizer',
+    tagline: 'Paste any text and get a clear AI summary with key points.',
+    metaDescription:
+      'Paste long articles, emails, or notes and get a clear, short summary in seconds. Free AI text summarizer — adjust the length, no signup needed.',
+    keywords: ['text summarizer', 'summarize text', 'ai summarizer', 'article summarizer', 'summary generator', 'free text summarizer'],
+    category: 'Generator',
+    emoji: '📝',
+    image: '/tools/text-summarizer.jpg',
+    imageAlt: 'A printed document resting on office stationery',
+    primaryKeyword: 'text summarizer',
+    intro:
+      'Paste an article, essay, report, email thread, or any long block of text and get a clear, faithful summary in seconds — plus a short list of key points. Choose short, medium, or long depending on how much detail you want. The summary sticks strictly to what your text says, so you get the gist without invented facts. Free, no signup, and it works in your text\'s own language.',
+    howItWorks: [
+      { title: 'Paste your text', description: 'Drop in an article, essay, notes, or email — up to a few thousand words.' },
+      { title: 'Choose a length', description: 'Pick short, medium, or long for the level of detail you want.' },
+      { title: 'Get your summary', description: 'Read a concise summary plus key bullet points, then copy them in one tap.' },
+    ],
+    faqs: [
+      {
+        q: 'Is this text summarizer free?',
+        a: 'Yes — it is free to use with no signup. To keep it available for everyone, there is a light rate limit on rapid repeated requests.',
+      },
+      {
+        q: 'Does the summarizer make up facts?',
+        a: 'It is instructed to summarize only what your text actually says and not to add outside information. As with any AI tool, skim the summary against the source for anything important before you rely on it.',
+      },
+      {
+        q: 'What kind of text can I summarize?',
+        a: 'Articles, blog posts, essays, research, meeting notes, transcripts, and long emails all work well. Paste up to roughly six thousand characters at a time for best results.',
+      },
+      {
+        q: 'What languages does it support?',
+        a: 'It summarizes in the same language as your input, so you can paste text in many languages and get a summary back in that language.',
+      },
+      {
+        q: 'Are the key points different from the summary?',
+        a: 'Yes — the summary is a short paragraph, while the key points break out the main ideas as quick, scannable bullets. Use whichever fits how you want to share or save the gist.',
+      },
+    ],
+    relatedSlugs: ['ai-text-humanizer', 'da-pa-checker', 'fancy-text-generator'],
+    ctaHook: 'Run a tutoring, research, or content business? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'What an AI text summarizer does well — and where to double-check it',
+    about:
+      'An AI text summarizer reads a long passage and produces a much shorter version that keeps the main ideas while dropping the detail. Modern summarizers are "abstractive": rather than just stitching together sentences pulled from the original, a language model rewrites the gist in fresh wording, which usually reads more naturally than older extractive tools. That makes them genuinely useful for getting through a long article quickly, turning a dense report into a few takeaways, catching up on a sprawling email thread, or condensing study notes and transcripts into something you can review at a glance. This tool asks the model to stay faithful to the source — to summarize only what the text says and to avoid introducing outside facts — and returns both a paragraph summary and a handful of key points so you can pick the format that suits you. It also works in the language of whatever you paste, summarizing back in that same language. A few practical notes. Summarization is lossy by design: nuance, caveats, and supporting evidence get compressed away, so for anything high-stakes — legal, medical, financial, or academic — treat the summary as a fast first pass and check the original before acting on it. Very long inputs are best broken into sections, since every model has a limit on how much it can consider at once; this tool accepts up to a few thousand characters per request. And while the model is instructed to be faithful, no AI summarizer is perfect, so a quick skim against the source is always wise when accuracy matters. Used with that light supervision, an AI summarizer is one of the highest-leverage everyday tools available — it turns the time-consuming job of reading-to-extract into a few seconds, and gives you a clean, copy-ready summary and bullet list you can paste into notes, messages, or documents.',
+  },
+  {
+    slug: 'ai-text-humanizer',
+    title: 'AI Text Humanizer — Make AI Writing Sound Human',
+    h1: 'AI Text Humanizer',
+    shortName: 'AI Text Humanizer',
+    tagline: 'Rewrite stiff or AI-sounding text so it reads naturally human.',
+    metaDescription:
+      'Paste AI-generated text and get a natural rewrite that reads like a real person. Free AI text humanizer to soften robotic tone. No signup needed.',
+    keywords: ['ai text humanizer', 'humanize ai text', 'text humanizer', 'humanize ai text free', 'ai to human text', 'make ai text sound human'],
+    category: 'Generator',
+    emoji: '🧑‍💻',
+    image: '/tools/ai-text-humanizer.jpg',
+    imageAlt: 'A person writing in a notebook beside a laptop',
+    primaryKeyword: 'ai text humanizer',
+    intro:
+      'Paste stiff, robotic, or AI-generated text and get a rewrite that reads like a real person wrote it — natural rhythm, plain wording, and none of the tell-tale AI filler. Choose a tone (casual, professional, friendly, or confident) to match where the text is going. It keeps your meaning and language intact while making the writing flow. Free, no signup, copy your result in one tap.',
+    howItWorks: [
+      { title: 'Paste your text', description: 'Drop in text that sounds stiff or machine-generated.' },
+      { title: 'Pick a tone', description: 'Choose casual, professional, friendly, or confident.' },
+      { title: 'Humanize & copy', description: 'Get a natural rewrite that keeps your meaning, then copy it.' },
+    ],
+    faqs: [
+      {
+        q: 'What does an AI text humanizer do?',
+        a: 'It rewrites text so it reads more naturally — varying sentence length, swapping jargon for plain words, and removing robotic phrasing — while keeping your original meaning and language. Think of it as an editor that smooths stiff writing.',
+      },
+      {
+        q: 'Will this guarantee my text passes AI detectors?',
+        a: 'No. AI detectors are unreliable and change constantly, and we make no claim to beat them. This tool focuses on making writing clearer and more natural to read — not on gaming detection.',
+      },
+      {
+        q: 'Does it keep my meaning and facts?',
+        a: 'It is instructed to preserve your meaning and not add new claims. Because any rewrite can subtly shift emphasis, always read the result and confirm it still says what you intended before you use it.',
+      },
+      {
+        q: 'Is the AI text humanizer free?',
+        a: 'Yes — free with no signup. A light rate limit applies to rapid repeated requests so the tool stays available to everyone.',
+      },
+      {
+        q: 'Should I use humanized AI text for schoolwork?',
+        a: 'Follow your school or employer\'s rules on AI assistance and disclosure. Use this to improve your own writing\'s clarity, not to misrepresent authorship where that is against the rules.',
+      },
+    ],
+    relatedSlugs: ['text-summarizer', 'da-pa-checker', 'fancy-text-generator'],
+    ctaHook: 'Run a content, marketing, or tutoring business? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How AI text humanizers work, honestly',
+    about:
+      'An "AI text humanizer" is, under the hood, an AI editor. You give it a passage that sounds stiff, generic, or obviously machine-written, and a language model rewrites it to read more like natural human prose: it varies sentence length and rhythm, prefers plain words over jargon, trims filler and hedging, and strips out the tell-tale phrases that flag machine writing — the "in today\'s fast-paced world" openings, the relentless "moreover" and "it is important to note", the over-balanced both-sides sentences. The goal is clarity and flow, while keeping your meaning and your language intact. That is genuinely useful: first drafts, translated text, and quick AI outputs are often correct but lifeless, and a humanizing pass can make them readable and engaging without you rewriting from scratch. It is worth being clear-eyed about what these tools cannot do. Many are marketed as a way to "bypass AI detectors", but detection itself is unreliable — detectors produce false positives on human writing and false negatives on machine writing, and they shift constantly — so no rewrite can honestly promise to beat them, and this tool makes no such claim. What it can do is improve how the writing reads. Two cautions matter. First, any rewrite can subtly change emphasis or introduce a small inaccuracy, so always read the output and confirm it still says exactly what you meant before you publish or send it. Second, authorship rules apply: schools and many employers have policies on AI assistance and disclosure, and using a humanizer to misrepresent who or what wrote something can violate them. Used the right way — as an editing aid that makes your own ideas clearer and more natural, with a tone you choose to fit the context — an AI humanizer is a fast, practical writing assistant. This tool keeps your input under a sensible length per request, offers a few common tones, and returns a clean rewrite you can copy in a single tap.',
+  },
+  {
+    slug: 'da-pa-checker',
+    title: 'DA PA Checker — Check Domain & Page Authority Free',
+    h1: 'DA / PA Checker',
+    shortName: 'DA / PA Checker',
+    tagline: "Check any website's authority score in seconds — free, no signup.",
+    metaDescription:
+      "Check any website's Domain Authority and Page Authority score in seconds. Free DA PA checker tool — no signup, instant results, unlimited checks.",
+    keywords: [
+      'da pa checker',
+      'domain authority checker',
+      'page authority checker',
+      'check domain authority',
+      'website authority score',
+      'free da checker',
+    ],
+    category: 'Calculator',
+    emoji: '📊',
+    image: '/tools/da-pa-checker.jpg',
+    imageAlt: 'SEO analytics dashboard showing website authority and ranking metrics',
+    primaryKeyword: 'da pa checker',
+    intro:
+      "Type any domain and instantly see its authority score (0–100) and where it ranks among the world's websites. This checker is powered by Open PageRank — a free, link-based authority dataset that works just like the metric Moz calls Domain Authority. Use it to size up competitors, vet a backlink prospect, or track how your own site is trending, with no account and no credit card.",
+    howItWorks: [
+      {
+        title: 'Enter a domain or URL',
+        description: 'Paste a website like example.com or a full link — we strip it down to the domain automatically.',
+      },
+      {
+        title: 'Get the authority score',
+        description: 'We look up the domain in the Open PageRank dataset and show its authority (0–100) plus its global rank.',
+      },
+      {
+        title: 'Compare and act',
+        description: 'Check competitors and link targets side by side, then text Pixie to actually move the number with real SEO.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is DA / PA?',
+        a: 'Domain Authority (DA) and Page Authority (PA) are scores from 0 to 100 that estimate how likely a website (DA) or a single page (PA) is to rank in search results. They are based mostly on the quantity and quality of links pointing at the site or page. Higher is stronger.',
+      },
+      {
+        q: 'Where do these numbers come from?',
+        a: 'This tool uses Open PageRank, a free authority dataset built from a large web-link graph. It produces a 0–100 authority score that behaves like Domain Authority. It is a genuine, independent metric — not a Moz API call — so it will not match Moz\'s DA exactly, but it tracks the same idea: stronger link profile, higher score.',
+      },
+      {
+        q: 'Can it check Page Authority for a specific URL?',
+        a: 'True page-level PA is a Moz-proprietary metric and is not available for free. This checker reports authority at the domain level. If you need page-by-page PA, backlink lists, and a full audit, Pixie can run that for you — tap the WhatsApp button after you check a domain.',
+      },
+      {
+        q: 'Why is a site showing 0 or "not found"?',
+        a: 'Open PageRank only has data for domains it has crawled in its link graph. Brand-new sites, very small sites, or unusual TLDs may not appear yet and will show as 0 or unranked. That usually means the site has few known backlinks — not that the tool is broken.',
+      },
+      {
+        q: 'Is the DA PA checker free?',
+        a: 'Yes — free with no signup. A light rate limit applies to rapid repeated lookups so the tool stays fast for everyone.',
+      },
+      {
+        q: 'How do I actually raise my authority?',
+        a: 'Authority grows when other reputable sites link to yours, which comes from genuinely useful content, a fast technical site, and real outreach. There is no instant trick. Pixie builds SEO-ready sites and runs ongoing audits to help you earn it — message us to start.',
+      },
+    ],
+    relatedSlugs: ['text-summarizer', 'ai-text-humanizer', 'trust-badge-generator'],
+    ctaHook: 'Want to actually raise your authority? Pixie builds SEO-ready websites and runs full audits — text us on WhatsApp.',
+    aboutHeading: 'What Domain Authority really measures',
+    about:
+      'Domain Authority (DA) and Page Authority (PA) started as Moz metrics: a single 0–100 score that predicts how well a site or page is likely to rank in search, derived largely from its backlink profile — how many other sites link to it, and how trustworthy those sites are themselves. The scores are logarithmic, so climbing from 20 to 30 is far easier than climbing from 70 to 80, and they are relative, not absolute: a 40 is strong in a quiet niche and weak in a competitive one. Crucially, DA and PA are third-party estimates, not numbers Google publishes or uses — Google has repeatedly said it has no single "authority score." They are still useful precisely because they are comparable: line up five competitors or five link prospects and the scores tell you, at a glance, who carries weight. This tool is powered by Open PageRank, a free dataset that models the same web-link graph and outputs a comparable 0–100 authority score, so you get the practical signal without a paid subscription. Treat the number as a compass, not a verdict. A high score does not guarantee a page will rank for your keyword, and a low score does not mean you cannot win — relevance, content quality, search intent, page speed, and user experience all matter alongside links. The honest way to use an authority checker is for triage: spotting which competitors dominate a space, deciding whether a backlink is worth pursuing, and tracking whether your own trend line is moving up over months. Moving that line is the slow part — it comes from publishing things worth linking to, fixing the technical foundations of your site, and earning mentions from real, relevant sources. That is exactly the work Pixie is built to support: a fast, SEO-ready site to stand on, and ongoing audits to keep the trend pointing up.',
+  },
+  {
+    slug: 'zalgo-text-generator',
+    title: 'Zalgo Text Generator — Creepy Glitch Text Free',
+    h1: 'Zalgo Text Generator',
+    shortName: 'Zalgo Text Generator',
+    tagline: 'Turn normal text into creepy, glitchy zalgo text.',
+    metaDescription:
+      'Turn normal text into creepy, glitchy zalgo text with adjustable intensity. Copy and paste it anywhere. Free zalgo text generator — no signup needed.',
+    keywords: [
+      'zalgo text generator',
+      'zalgo text',
+      'glitch text',
+      'cursed text',
+      'creepy text generator',
+    ],
+    category: 'Generator',
+    emoji: '💀',
+    image: '/tools/zalgo-text-generator.jpg',
+    imageAlt: 'Glitchy distorted typography on a dark screen',
+    primaryKeyword: 'zalgo text generator',
+    intro:
+      'Type any word and watch it melt into glitchy, corrupted zalgo text — the classic "he comes" effect. Drag the intensity slider, choose whether marks stack above, through, or below your letters, then copy it straight into Discord, Instagram, TikTok, or anywhere that accepts Unicode.',
+    howItWorks: [
+      {
+        title: 'Type your text',
+        description: 'Enter any word or sentence. The corruption is applied live as you type.',
+      },
+      {
+        title: 'Set the intensity',
+        description: 'Drag the slider for light static or full meltdown, and toggle marks above, middle, or below the line.',
+      },
+      {
+        title: 'Copy anywhere',
+        description: 'Hit copy and paste your zalgo text into Discord, IG bios, usernames, or captions.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is zalgo text?',
+        a: 'Zalgo text is normal text decorated with dozens of stacked Unicode "combining" marks so it appears to glitch, drip, or corrupt. The look is associated with the internet horror meme "Zalgo" and the phrase "he comes". Because it uses real Unicode characters, it survives copy-paste across most apps.',
+      },
+      {
+        q: 'Does zalgo text work on Discord and Instagram?',
+        a: 'Yes. The output is real Unicode, so it pastes into Discord messages and nicknames, Instagram bios and captions, TikTok, and most chat apps. Some platforms cap how many combining marks they render, so extreme intensity may look slightly tamer once pasted.',
+      },
+      {
+        q: 'Is zalgo text the same as glitch or cursed text?',
+        a: 'They overlap. "Glitch" and "cursed" text usually mean the same combining-mark technique with a different vibe. Our Zalgo Text Generator gives you the strongest control over intensity and direction; the Glitch and Cursed generators are tuned for their own looks.',
+      },
+      {
+        q: 'Why does my zalgo text look broken in some places?',
+        a: 'Each app decides how many stacked marks to draw. Single-line inputs (usernames, search bars) often clip the marks, while multi-line text fields show the full effect. That clipping is the app, not your copied text — the characters are still there.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Completely. Everything runs in your browser, your text never touches a server, and there is no signup, watermark, or limit.',
+      },
+    ],
+    relatedSlugs: ['glitch-text-generator', 'cursed-text-generator', 'fancy-text-generator'],
+    ctaHook: 'Building a gaming, music, or horror brand? Pixie ships your full website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How zalgo text actually works',
+    about:
+      'Zalgo text exploits a feature of Unicode called combining diacritical marks — the accents and squiggles (U+0300 to U+036F) that normally sit on a single letter, like the tilde on ñ or the umlaut on ü. Unicode lets you stack many of these marks onto one base character, and renderers will try to draw all of them, piling glyphs above and below the line until the text looks like it is bleeding or corrupting. A zalgo generator simply takes each character you type and appends a random number of "up", "middle", and "down" combining marks. Because these are genuine characters rather than an image or font, the effect copies into almost any text field. The meme itself traces back to a 2004 webcomic edit and the eerie tagline "he comes / to end the world", which is why zalgo became shorthand for creepy, glitchy, corrupted text across forums, Discord servers, and horror content. The one practical caveat is accessibility: screen readers attempt to pronounce every combining mark, so heavy zalgo text is unreadable to assistive tech — use it for vibes and decoration, never for the core message you need everyone to understand.',
+  },
+  {
+    slug: 'cursed-text-generator',
+    title: 'Cursed Text Generator — Creepy Text Effects Online',
+    h1: 'Cursed Text Generator',
+    shortName: 'Cursed Text Generator',
+    tagline: 'Generate creepy cursed text with one click presets.',
+    metaDescription:
+      'Generate cursed, demonic-looking text with one-click presets. Copy and paste into Discord, social media, bios, or messages. Free cursed text tool, no signup.',
+    keywords: [
+      'cursed text generator',
+      'cursed text',
+      'creepy text',
+      'glitch text generator',
+      'zalgo text',
+    ],
+    category: 'Generator',
+    emoji: '😈',
+    image: '/tools/cursed-text-generator.jpg',
+    imageAlt: 'Eerie distorted lettering glowing in the dark',
+    primaryKeyword: 'cursed text generator',
+    intro:
+      'Turn plain words into eerie, cursed text with one tap. Pick a curse level — from a faint flicker to fully possessed — and copy the result into Discord, Instagram, TikTok, or your gamer tag. Presets keep it readable when you want creepy-but-legible, or unleash full corruption.',
+    howItWorks: [
+      {
+        title: 'Type your text',
+        description: 'Enter the word or phrase you want to curse. The effect updates instantly.',
+      },
+      {
+        title: 'Pick a curse level',
+        description: 'Mild, Cursed, Haunted, or Possessed — each preset stacks more eerie overlay and glitch marks.',
+      },
+      {
+        title: 'Copy and paste',
+        description: 'Copy the cursed text into chats, bios, usernames, or video captions.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is cursed text?',
+        a: 'Cursed text is normal text overlaid with stacked Unicode combining marks — strike-throughs, overlays, and diacritics — so it looks corrupted, haunted, or "cursed". It is the same underlying technique as zalgo and glitch text, presented with eerie one-tap presets here.',
+      },
+      {
+        q: 'Where can I use cursed text?',
+        a: 'Anywhere that accepts Unicode: Discord servers and nicknames, Instagram and TikTok bios and captions, Twitter/X, Tumblr, and most chat apps. Because it is real characters, it survives copy-paste rather than relying on fonts.',
+      },
+      {
+        q: 'What is the difference between the curse levels?',
+        a: '"Mild" adds a light flicker that stays readable, "Cursed" gives a solid creepy look, "Haunted" stacks more marks for heavy distortion, and "Possessed" goes full meltdown. Use Re-roll to get a fresh random variation at any level.',
+      },
+      {
+        q: 'Will cursed text break or show as boxes?',
+        a: 'On modern devices the marks render correctly. Some apps limit how many stacked marks they draw — especially in single-line fields — so very high levels may look milder once pasted. The characters themselves are still intact.',
+      },
+      {
+        q: 'Is the cursed text generator free?',
+        a: 'Yes — no signup, no watermark, no limits. It runs entirely in your browser, so nothing you type is uploaded anywhere.',
+      },
+    ],
+    relatedSlugs: ['zalgo-text-generator', 'glitch-text-generator', 'fancy-text-generator'],
+    ctaHook: 'Run a gaming, streaming, or horror-themed brand? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Cursed, glitch, and zalgo text explained',
+    about:
+      'Cursed text, glitch text, and zalgo text are three names for the same Unicode trick: taking ordinary letters and layering "combining" marks on top of them. Combining marks are characters that have no width of their own — they attach to the letter before them, which is how accented letters work in many languages. Unicode does not stop you from attaching dozens of them to a single character, and most text renderers will dutifully try to draw every one, producing glyphs that drip, smear, and overflow their line. The "cursed" framing leans into overlay and strike-through marks for an eerie, haunted feel rather than the chaotic full-corruption of classic zalgo, which is why this tool ships curated curse-level presets instead of a raw slider. All three styles are popular in gaming usernames, horror edits, Discord communities, and aesthetic social posts because they read as unsettling and otherworldly while still being plain, copy-pasteable text. The trade-off is the same across all of them: screen readers and search engines cannot make sense of heavily decorated text, so keep cursed styling to decorative flourishes — a username, a caption accent, a title — rather than anything a reader genuinely needs to parse.',
+  },
+  {
+    slug: 'backwards-text-generator',
+    title: 'Backwards Text Generator — Reverse Text Instantly',
+    h1: 'Backwards Text Generator',
+    shortName: 'Backwards Text Generator',
+    tagline: 'Reverse text by letters, words, or lines instantly.',
+    metaDescription:
+      'Reverse text by letters, words, or lines in one click. Free backwards text generator — paste your text, choose a mode, and copy the result. No signup needed.',
+    keywords: [
+      'backwards text generator',
+      'reverse text',
+      'reverse text generator',
+      'flip text',
+      'mirror text',
+    ],
+    category: 'Generator',
+    emoji: '🔁',
+    image: '/tools/backwards-text-generator.jpg',
+    imageAlt: 'Letters reflected in a mirror on a clean desk',
+    primaryKeyword: 'backwards text generator',
+    intro:
+      'Paste any text and instantly reverse it — flip the letters (hello → olleh), reverse the word order, or flip the line order. Useful for puzzles, secret messages, social captions, and checking palindromes. Everything happens live in your browser.',
+    howItWorks: [
+      {
+        title: 'Type or paste text',
+        description: 'Enter anything — a word, sentence, or several lines.',
+      },
+      {
+        title: 'Choose a reverse mode',
+        description: 'Reverse letters, reverse the order of words, or reverse the order of whole lines.',
+      },
+      {
+        title: 'Copy the result',
+        description: 'Grab the reversed text with one tap and paste it anywhere.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What does the backwards text generator do?',
+        a: 'It reverses your text. "Reverse letters" turns "hello" into "olleh", "reverse word order" turns "hello world" into "world hello", and "reverse line order" flips a list top-to-bottom. Pick whichever matches what you need.',
+      },
+      {
+        q: 'Is backwards text the same as upside-down text?',
+        a: 'No. Backwards text reverses the order of characters but keeps them upright. Upside-down text flips each letter so the whole thing reads as if rotated 180°. If you want the flipped look, use our Upside Down Text Generator instead.',
+      },
+      {
+        q: 'Does it handle emoji and accented letters?',
+        a: 'Yes. The reversal is done character-aware, so multi-byte characters like emoji and accented letters stay intact instead of splitting into broken symbols.',
+      },
+      {
+        q: 'Can I use this to check palindromes?',
+        a: 'Absolutely — reverse the letters and compare to the original. If they match (ignoring spaces and case), it is a palindrome. It is also handy for word puzzles, riddles, and simple obfuscation.',
+      },
+      {
+        q: 'Is it free and private?',
+        a: 'Yes. There is no signup, and the reversal runs entirely in your browser, so your text is never sent anywhere.',
+      },
+    ],
+    relatedSlugs: ['upside-down-text-generator', 'fancy-text-generator', 'glitch-text-generator'],
+    ctaHook: 'Run a puzzle, education, or content brand? Pixie builds full websites from one WhatsApp message.',
+    aboutHeading: 'Reversing text: characters, words, and lines',
+    about:
+      'Reversing text sounds trivial, but there are three genuinely different things people mean by "backwards", and mixing them up is the usual reason an online reverser gives a surprising result. The first is character reversal: walk the string from the last character to the first, so "Hello" becomes "olleH". The subtlety is that modern text is made of Unicode code points, and naive reversal that works byte-by-byte will shatter emoji and combined characters into garbage — which is why this tool reverses by character, not by byte. The second meaning is word-order reversal, where the letters inside each word stay put but the sequence of words flips, turning "the quick brown fox" into "fox brown quick the"; this is what you usually want for readable secret messages or rearranging a sentence. The third is line-order reversal, which leaves each line untouched but flips the list from bottom to top — useful for reversing logs, rankings, or step lists. None of these is the same as upside-down text, which substitutes each letter for a rotated look-alike glyph so the result reads as if you physically turned the screen over. Reversed text shows up in word games, palindrome checking, light obfuscation, retro and mirror-writing aesthetics, and the classic trick of writing something that only makes sense when held up to a mirror.',
+  },
+  {
+    slug: 'cool-text-generator',
+    title: 'Cool Text Generator — Neon, 3D & Gradient Text Logos',
+    h1: 'Cool Text Generator',
+    shortName: 'Cool Text Generator',
+    tagline: 'Design cool text logos with neon, gradient, and 3D styles.',
+    metaDescription:
+      'Design cool text logos with neon, gradient, and 3D styles. Free online cool text generator — create stylized lettering for thumbnails, bios, and profiles.',
+    keywords: [
+      'cool text generator',
+      'cool text',
+      'text logo maker',
+      'cool fonts generator',
+      'graphic text generator',
+    ],
+    category: 'Generator',
+    emoji: '🎨',
+    image: '/tools/cool-text-generator.jpg',
+    imageAlt: 'Colorful stylized 3D text logo on a gradient background',
+    primaryKeyword: 'cool text generator',
+    intro:
+      'Type a word and turn it into a cool, graphic text logo — neon glow, gradient, fire, chrome, 3D, or outline. Pick your color, preview live, and download a transparent PNG ready for a YouTube thumbnail, banner, profile picture, or logo mockup.',
+    howItWorks: [
+      {
+        title: 'Type your text',
+        description: 'Enter a word or short phrase — names, brands, gamer tags, and titles work best.',
+      },
+      {
+        title: 'Pick a style and color',
+        description: 'Choose neon, gradient, fire, chrome, 3D, or outline, then set your brand color.',
+      },
+      {
+        title: 'Download the PNG',
+        description: 'Export a transparent, retina-crisp PNG and drop it into any design.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What does the cool text generator make?',
+        a: 'It renders your text as a styled graphic — a small text logo — with effects like neon glow, gradients, chrome, fire, 3D depth, and outlines. The result downloads as a transparent PNG image, not as font characters.',
+      },
+      {
+        q: 'Is the downloaded image free to use?',
+        a: 'Yes. The PNG you generate is free for personal and commercial use — thumbnails, banners, merch, logos — with no watermark and no attribution required.',
+      },
+      {
+        q: 'Why is this an image instead of copy-paste text?',
+        a: 'Effects like glow, gradient, and 3D depth cannot be expressed with plain Unicode characters, so they have to be rendered as an image. If you want copy-paste styled letters instead, try the Fancy Text Generator.',
+      },
+      {
+        q: 'Does the PNG have a transparent background?',
+        a: 'Yes — the export is transparent, so you can layer it over any photo, color, or thumbnail without a white box around it.',
+      },
+      {
+        q: 'Does it work on mobile?',
+        a: 'Yes. It renders in any modern mobile browser, and the download saves straight to your device. Everything runs locally — your text never leaves your phone.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'glitch-text-generator', 'trust-badge-generator'],
+    ctaHook: 'Need a full logo and brand identity, not just text art? Pixie delivers logos, websites, and ads from one WhatsApp message.',
+    aboutHeading: 'From cool text to a real brand identity',
+    about:
+      'The "cool text" category goes back to the early web, when sites like CoolText let anyone render a word as a glossy, beveled, flaming logo without opening Photoshop. The appeal has never really faded: creators still need quick, good-looking text graphics for YouTube thumbnails, Twitch overlays, Discord banners, profile pictures, and event flyers, and most of them do not want to learn vector software to get one. This generator draws your text onto an HTML canvas and applies the effect in real time — neon uses layered strokes and shadow blur to fake a glowing tube, the gradient and fire styles paint a vertical color ramp into the letterforms, chrome stacks light-to-dark-to-light bands for a metallic sheen, and the 3D style offsets multiple shadow copies to extrude depth. Because it is canvas-based, the export is a true transparent PNG you can drop onto any background. The honest limitation is that a single styled word is a graphic, not a brand: it cannot adapt to every size, it is not a vector you can recolor infinitely, and it does not come with the typography system, palette, and logo lockups a real identity needs. That is the line where a free tool stops and a designed brand begins — and exactly where Pixie picks up, turning a single WhatsApp message into a full logo, website, and ad set.',
+  },
+  {
+    slug: 'compare-text',
+    title: 'Compare Text — Spot Differences Between Two Texts',
+    h1: 'Compare Text Tool',
+    shortName: 'Compare Text',
+    tagline: 'Spot every difference between two blocks of text.',
+    metaDescription:
+      'Paste two blocks of text and instantly see every difference highlighted. Free text comparison tool — no signup, no install, works in your browser.',
+    keywords: [
+      'compare text',
+      'text compare',
+      'text difference checker',
+      'diff checker',
+      'compare two texts',
+    ],
+    category: 'Converter',
+    emoji: '🔍',
+    image: '/tools/compare-text.jpg',
+    imageAlt: 'Two documents side by side with differences highlighted',
+    primaryKeyword: 'compare text',
+    intro:
+      'Paste two versions of any text and instantly see what changed — added lines in green, removed lines in red. Ideal for proofreading edits, comparing contract drafts, checking code or config changes, and catching plagiarism or duplicate copy. Runs entirely in your browser.',
+    howItWorks: [
+      {
+        title: 'Paste both versions',
+        description: 'Drop the original text on the left and the changed text on the right.',
+      },
+      {
+        title: 'See the differences',
+        description: 'A line-by-line diff highlights additions in green and removals in red, with a running count.',
+      },
+      {
+        title: 'Tune the match',
+        description: 'Optionally ignore case and leading/trailing spaces so only real changes show up.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'How does the text compare tool work?',
+        a: 'It runs a line-by-line difference algorithm (longest common subsequence) between your two texts. Lines that exist only in the changed version are shown in green ("added"), lines only in the original are shown in red ("removed"), and unchanged lines stay neutral.',
+      },
+      {
+        q: 'Is my text uploaded anywhere?',
+        a: 'No. The entire comparison runs locally in your browser. Nothing is sent to a server, which makes it safe for confidential documents, contracts, and code.',
+      },
+      {
+        q: 'What can I use it for?',
+        a: 'Proofreading two drafts, reviewing contract or policy changes, comparing code or configuration files, checking whether two pieces of content are duplicates, and confirming that a copy-edit only changed what you intended.',
+      },
+      {
+        q: 'What do "ignore case" and "ignore spaces" do?',
+        a: '"Ignore case" treats "Hello" and "hello" as identical. "Ignore leading/trailing spaces" ignores indentation and trailing whitespace differences. Turn them on to focus on meaningful changes and hide cosmetic ones.',
+      },
+      {
+        q: 'Is there a length limit?',
+        a: 'There is no hard limit, but comparison is line-based and works best on documents up to a few thousand lines. Very large files may slow down because everything runs in your browser.',
+      },
+    ],
+    relatedSlugs: ['text-summarizer', 'pdf-to-text', 'ai-text-humanizer'],
+    ctaHook: 'Run a legal, editorial, or dev team? Pixie builds full websites and internal tools from one WhatsApp message.',
+    aboutHeading: 'How a text diff actually finds changes',
+    about:
+      'Comparing two pieces of text is a surprisingly deep problem, and the elegant answer is an algorithm called the longest common subsequence, or LCS. Rather than comparing the texts character by character — which would flag everything after a single inserted word as "changed" — LCS finds the longest sequence of lines that appears in both versions in the same order, then treats everything not in that sequence as either an addition or a removal. That is why a good diff can insert one new paragraph in the middle of a document and still recognize that everything around it is unchanged, instead of marking half the file red. It is the same core technique that powers "track changes" in word processors and the side-by-side views in version-control tools like Git. This tool applies LCS at the line level and colors the result: green for lines that exist only in your changed text, red for lines that existed only in the original, and neutral for the common backbone. The optional case- and whitespace-insensitive modes let you decide what counts as a "real" difference — useful when comparing code where indentation is noise, or prose where capitalization at the start of a re-flowed line is not a meaningful edit. Because the whole comparison happens in your browser, you can safely diff sensitive material — contracts, medical notes, unreleased copy — without it ever leaving your device.',
+  },
+  {
+    slug: 'pdf-to-text',
+    title: 'PDF to Text — Extract Text from Any PDF Free',
+    h1: 'PDF to Text Converter',
+    shortName: 'PDF to Text',
+    tagline: 'Extract text from any PDF right in your browser.',
+    metaDescription:
+      'Extract text from any PDF file right in your browser — no upload to a server, no signup required. Free PDF to text converter that works instantly.',
+    keywords: [
+      'pdf to text',
+      'pdf to text converter',
+      'extract text from pdf',
+      'pdf text extractor',
+      'convert pdf to text',
+    ],
+    category: 'Converter',
+    emoji: '📄',
+    image: '/tools/pdf-to-text.jpg',
+    imageAlt: 'A PDF document converting into editable plain text',
+    primaryKeyword: 'pdf to text',
+    intro:
+      'Drop in a PDF and pull out all its text in seconds — ready to copy, edit, or paste elsewhere. The whole conversion happens inside your browser, so even confidential PDFs never leave your device. Works page by page across multi-page documents.',
+    howItWorks: [
+      {
+        title: 'Choose a PDF',
+        description: 'Drag and drop or browse for any PDF file on your device.',
+      },
+      {
+        title: 'We extract the text',
+        description: 'The PDF is parsed page by page in your browser, preserving line breaks where possible.',
+      },
+      {
+        title: 'Copy or edit',
+        description: 'The extracted text lands in an editable box — tweak it, then copy it out.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'Is my PDF uploaded to a server?',
+        a: 'No. The PDF is read and parsed entirely in your browser using a JavaScript PDF engine. Your file never leaves your device, which makes the tool safe for contracts, statements, and other private documents.',
+      },
+      {
+        q: 'Does it work on scanned PDFs?',
+        a: 'Only if the PDF has a real text layer. A scanned document is essentially an image of text, so there is nothing to extract. For those, take a screenshot or export a page as an image and run it through our Image to Text (OCR) tool instead.',
+      },
+      {
+        q: 'Will it keep my formatting?',
+        a: 'It preserves the text content and reasonable line breaks, but not visual layout like columns, tables, fonts, or images. PDFs store text positionally, so complex multi-column layouts may extract in an unexpected reading order.',
+      },
+      {
+        q: 'Is there a file size or page limit?',
+        a: 'There is no hard limit, but because everything runs in your browser, very large PDFs (hundreds of pages) will take longer and use more memory. Most documents extract in a second or two.',
+      },
+      {
+        q: 'Is it really free?',
+        a: 'Yes — no signup, no watermark, no email required. Convert as many PDFs as you like.',
+      },
+    ],
+    relatedSlugs: ['image-to-text', 'text-summarizer', 'compare-text'],
+    ctaHook: 'Run a business that drowns in documents? Pixie builds websites and tools that handle them — text us on WhatsApp.',
+    aboutHeading: 'Why extracting PDF text is trickier than it looks',
+    about:
+      'A PDF is not a document in the way a Word file is — it is a set of drawing instructions. When software creates a PDF, it records exactly where to paint each glyph on the page, which means the "text" is really a cloud of positioned characters rather than flowing sentences. Extracting readable text means reading those positions back and reconstructing lines and word boundaries from the coordinates, which is why this tool groups characters by their vertical position to rebuild line breaks. It works beautifully for PDFs that were exported from a word processor, web page, or design tool, because the underlying text layer is intact. It cannot help with scanned PDFs, though: a scan is just a photograph of a page wrapped in a PDF container, with no text layer at all, so there is literally nothing to read out — that job belongs to optical character recognition, which is what our Image to Text tool does. The big advantage of doing extraction in the browser, as this tool does with the open-source pdf.js engine, is privacy: your PDF is parsed locally and never uploaded, so you can safely pull text out of bank statements, signed contracts, medical forms, or unreleased manuscripts without trusting a third-party server. Once the text is out, it is plain and editable — ready to summarize, translate, compare against another version, or paste into whatever you are writing.',
+  },
+  {
+    slug: 'image-to-text',
+    title: 'Image to Text — Free Online OCR Tool',
+    h1: 'Image to Text (OCR)',
+    shortName: 'Image to Text',
+    tagline: 'Extract text from any image with free in-browser OCR.',
+    metaDescription:
+      'Extract text from any image using free in-browser OCR. Upload a photo, screenshot, or scan and get editable text in seconds. No signup, no file upload limits.',
+    keywords: [
+      'extract text from image',
+      'image to text',
+      'picture to text',
+      'picture to text converter',
+      'ocr online',
+    ],
+    category: 'Converter',
+    emoji: '🖼️',
+    image: '/tools/image-to-text.jpg',
+    imageAlt: 'A photo of printed text being converted to editable characters',
+    primaryKeyword: 'extract text from image',
+    intro:
+      'Drop in a photo, screenshot, or scan and pull the words out as editable text. Powered by in-browser OCR (optical character recognition) in six languages, it reads printed text from images without uploading them anywhere — your picture stays on your device.',
+    howItWorks: [
+      {
+        title: 'Choose an image',
+        description: 'Drag and drop or browse for a JPG, PNG, WebP, or screenshot containing text.',
+      },
+      {
+        title: 'Pick the language',
+        description: 'Select the language of the text so OCR recognizes the right characters and accents.',
+      },
+      {
+        title: 'Copy the text',
+        description: 'OCR runs in your browser and drops the recognized text into an editable, copyable box.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'What is OCR?',
+        a: 'OCR stands for optical character recognition — technology that looks at an image of text and works out which letters and words it contains, turning a picture into editable, searchable text. This tool uses the open-source Tesseract engine running directly in your browser.',
+      },
+      {
+        q: 'Is my image uploaded anywhere?',
+        a: 'No. The OCR model runs locally in your browser, so your image never leaves your device. That makes it safe for screenshots of private messages, documents, or anything confidential.',
+      },
+      {
+        q: 'What kinds of images work best?',
+        a: 'Clear, high-contrast printed text — screenshots, scanned documents, signs, slides, book pages. Accuracy drops on handwriting, very small or blurry text, low light, heavy stylization, or text at an angle. A sharper photo almost always helps.',
+      },
+      {
+        q: 'Which languages are supported?',
+        a: 'English, Spanish, French, German, Italian, and Portuguese. Pick the matching language before running OCR — it tells the engine which character set and accents to expect, which improves accuracy.',
+      },
+      {
+        q: 'Why is the first run a bit slow?',
+        a: 'The first time you use a language, the OCR engine downloads its recognition model (a few megabytes). After that it is cached, so subsequent images process faster.',
+      },
+    ],
+    relatedSlugs: ['pdf-to-text', 'text-summarizer', 'audio-to-text'],
+    ctaHook: 'Digitizing receipts, forms, or documents for your business? Pixie builds the website and tools around it — text us on WhatsApp.',
+    aboutHeading: 'How optical character recognition reads an image',
+    about:
+      'Optical character recognition is one of the oldest practical applications of machine vision, and it is genuinely clever about something humans do effortlessly: looking at shapes and recognizing them as letters. A modern OCR engine like Tesseract first cleans up the image — adjusting contrast, straightening lines, and separating text from background — then segments the page into blocks, lines, words, and finally individual character shapes. Each shape is compared against learned models of what letters look like, using neural networks trained on enormous amounts of text in many fonts and languages, and the engine combines that with a language model so it can prefer real words over near-miss gibberish. Telling it which language you are scanning matters because each language has its own alphabet, accents, and common word patterns; an English model does not expect ñ or ü, and a French model knows that "été" is more likely than a random accented string. The remarkable part of this particular tool is that all of that runs inside your web browser via WebAssembly — there is no server doing the recognition, so your image stays private and you can even use it offline once the model is cached. OCR has limits worth respecting: it reads printed type far better than handwriting, it struggles with low resolution and motion blur, and it can scramble the reading order of complex multi-column layouts. But for the everyday job of lifting text out of a screenshot, a photographed sign, a slide, or a scanned page, it turns a picture you cannot edit into words you can copy, search, translate, and reuse.',
+  },
+  {
+    slug: 'text-to-speech',
+    title: 'Text to Speech — Free Online TTS Tool',
+    h1: 'Text to Speech',
+    shortName: 'Text to Speech',
+    tagline: 'Turn any text into natural spoken audio, free.',
+    metaDescription:
+      'Convert any text to natural-sounding speech for free. Listen in your browser or download the audio. No signup needed — free text to speech tool online.',
+    keywords: [
+      'text to speech',
+      'text to voice',
+      'read text aloud',
+      'tts online',
+      'text to speech free',
+    ],
+    category: 'Converter',
+    emoji: '🔊',
+    image: '/tools/text-to-speech.jpg',
+    imageAlt: 'Sound waves emanating from a block of text',
+    primaryKeyword: 'text to voice',
+    intro:
+      'Type or paste any text and have it read aloud in a natural voice. Choose from the voices installed on your device, adjust the speed and pitch, and play, pause, or stop. Great for proofreading by ear, accessibility, learning pronunciation, or listening to articles hands-free.',
+    howItWorks: [
+      {
+        title: 'Enter your text',
+        description: 'Type or paste anything you want read aloud — a paragraph, an article, a script.',
+      },
+      {
+        title: 'Pick a voice and speed',
+        description: 'Choose from your device voices and fine-tune the reading speed and pitch.',
+      },
+      {
+        title: 'Press play',
+        description: 'Listen instantly, and pause or stop whenever you like. Nothing is uploaded.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'How does the text to speech tool work?',
+        a: 'It uses your browser\'s built-in speech synthesis engine to read text aloud using the voices already installed on your device. Because it is local, playback is instant, private, and free.',
+      },
+      {
+        q: 'Why do the available voices differ on my phone vs laptop?',
+        a: 'The voice list comes from your operating system, not from us. iPhones, Android phones, Windows, and Macs each ship different built-in voices, so the same page will offer different options depending on the device and browser you open it in.',
+      },
+      {
+        q: 'Can I download the audio as an MP3?',
+        a: 'Browser speech synthesis plays audio live but does not expose a downloadable file, so this tool is for listening rather than exporting. If you need downloadable, studio-quality AI voiceovers, message us on WhatsApp — that is something Pixie can build for you.',
+      },
+      {
+        q: 'What is text to speech good for?',
+        a: 'Proofreading by ear (you catch awkward phrasing faster when you hear it), accessibility for low-vision or dyslexic readers, learning pronunciation, listening to long articles hands-free, and previewing scripts or voiceover copy.',
+      },
+      {
+        q: 'Is it free and private?',
+        a: 'Yes. There is no signup, and because synthesis happens on your device, the text you enter is never sent to a server.',
+      },
+    ],
+    relatedSlugs: ['audio-to-text', 'text-summarizer', 'image-to-text'],
+    ctaHook: 'Need real AI voiceovers or an accessible website? Pixie builds it from one WhatsApp message.',
+    aboutHeading: 'Text to speech, on-device and in the cloud',
+    about:
+      'Text to speech has quietly become one of the most useful everyday accessibility technologies, and most people do not realize their phone and laptop already ship a capable engine for it. This tool taps the Web Speech API, a browser standard that hands your text to the operating system\'s built-in synthesizer and streams the audio back instantly. That design has real advantages: it is free, it works offline, and because nothing is uploaded, the text you paste stays completely private. The catch is that the voices come from the device, so quality and selection vary — Apple, Google, and Microsoft each bundle their own set, and a high-end phone may sound noticeably more natural than an old laptop. There is also no way to capture the spoken audio as a file, because the browser plays it rather than rendering it to a download. That is the dividing line between an on-device reader like this and a cloud text-to-speech service: modern neural voices from providers like ElevenLabs or OpenAI sound strikingly human, can be exported as MP3 or WAV, and let you clone or customize a voice, but they cost money per character and send your text to a server. For the common jobs — proofreading by ear, reading an article hands-free, checking pronunciation, or making content accessible — the on-device reader is more than enough and respects your privacy. When you need broadcast-quality narration you can ship, that is where a built solution comes in, and exactly the kind of thing Pixie can wire into a website or product for you.',
+  },
+  {
+    slug: 'audio-to-text',
+    title: 'Audio to Text — Transcribe Audio Free Online',
+    h1: 'Audio to Text',
+    shortName: 'Audio to Text',
+    tagline: 'Transcribe audio recordings into text in minutes.',
+    metaDescription:
+      'Transcribe audio recordings into accurate text in minutes. Upload any audio file and get a full transcript. Free audio to text converter — no signup needed.',
+    keywords: [
+      'audio to text',
+      'audio to text converter',
+      'transcribe audio',
+      'audio transcription',
+      'speech to text',
+      'voice recorder to text',
+    ],
+    category: 'Converter',
+    emoji: '🎙️',
+    image: '/tools/audio-to-text.jpg',
+    imageAlt: 'A microphone beside a transcript of spoken words',
+    primaryKeyword: 'audio to text',
+    intro:
+      'Upload a voice memo, interview, lecture, podcast, or meeting recording — or record live from your microphone — and get an accurate text transcript back. Powered by OpenAI\'s Whisper model, it handles dozens of languages and auto-detects the spoken language if you are not sure. Copy the transcript and you are done.',
+    howItWorks: [
+      {
+        title: 'Upload or record',
+        description: 'Drag in an mp3, m4a, wav, ogg, flac, or webm file (up to 25 MB), or record live from your mic.',
+      },
+      {
+        title: 'Choose the language',
+        description: 'Leave it on auto-detect, or pick the spoken language for best accuracy.',
+      },
+      {
+        title: 'Get your transcript',
+        description: 'The recording is transcribed and the text appears ready to copy.',
+      },
+    ],
+    faqs: [
+      {
+        q: 'How accurate is the transcription?',
+        a: 'It uses OpenAI\'s Whisper model, which is among the most accurate general-purpose speech recognizers available and handles accents and background noise well. Accuracy is highest on clear recordings; heavy noise, crosstalk, or very faint audio will reduce it.',
+      },
+      {
+        q: 'What languages are supported?',
+        a: 'Whisper supports dozens of languages and can auto-detect the one being spoken. You can also pick a specific language — English, Spanish, French, German, Italian, Portuguese, Hindi, Arabic, and more — to nudge accuracy.',
+      },
+      {
+        q: 'What file formats and sizes can I use?',
+        a: 'Common audio formats — mp3, m4a, wav, ogg, flac, and webm — up to 25 MB per file. For long recordings, exporting at a lower bitrate keeps you under the limit without hurting transcription much.',
+      },
+      {
+        q: 'Can I record audio directly in the browser?',
+        a: 'Yes. Switch to the Record tab and the tool captures audio straight from your microphone (your browser will ask for permission). Recordings can run up to 10 minutes; when you stop, you can play it back, then hit Transcribe. The recording happens locally and is only sent for transcription when you choose to transcribe it.',
+      },
+      {
+        q: 'Is my audio stored?',
+        a: 'No. Your file is sent securely to the transcription service, converted to text, and not retained by us. The transcript is returned to your browser and nowhere else.',
+      },
+      {
+        q: 'What can I use it for?',
+        a: 'Turning interviews and meetings into notes, captioning videos, drafting show notes from a podcast, transcribing voice memos and lectures, and making spoken content searchable. The transcript is plain editable text you can clean up and reuse.',
+      },
+    ],
+    relatedSlugs: ['text-to-speech', 'text-summarizer', 'pdf-to-text'],
+    ctaHook: 'Run a podcast, agency, or research team? Pixie builds the website and workflow around your content — text us on WhatsApp.',
+    aboutHeading: 'Speech recognition, finally good enough to trust',
+    about:
+      'Automatic transcription used to be a punchline — the kind of feature that turned "recognize speech" into "wreck a nice beach" — but the technology crossed a real threshold with large speech models trained on enormous, diverse audio. OpenAI\'s Whisper, which powers this tool, was trained on hundreds of thousands of hours of multilingual speech, and the result is a transcriber that copes gracefully with accents, casual speech, technical vocabulary, and a fair amount of background noise. It also detects the spoken language automatically and can transcribe dozens of them, which is why a single tool can handle an English podcast, a Spanish interview, and a Hindi voice memo without you changing any settings. Under the hood the model listens to the audio in short overlapping windows and predicts the most likely sequence of words, using its language understanding to disambiguate similar-sounding phrases from context — the same principle that lets a human catch a mumbled word because they know what the sentence is about. The practical limits are honest ones: extremely noisy recordings, several people talking over each other, and very long files are still hard, and like any model it can occasionally invent a plausible-sounding word in a silent or garbled stretch, so a quick read-through is wise before you rely on a transcript. Used well, though, it collapses one of the most tedious knowledge-work tasks there is — turning hours of spoken audio into searchable, editable, shareable text — from an afternoon into a couple of minutes, freeing interviews, meetings, lectures, and podcasts to be summarized, quoted, captioned, and translated.',
+  },
+  {
+    slug: 'random-food-generator',
+    title: 'Random Food Generator — What Should I Eat?',
+    h1: 'Random Food Generator',
+    shortName: 'Random Food Generator',
+    tagline: 'Can\'t decide what to eat? Let the generator pick.',
+    metaDescription:
+      "Can't decide what to eat? Our free random food generator picks a meal or snack for you. Filter by breakfast, lunch, dinner, dessert, or snack. No signup.",
+    keywords: [
+      'random food generator',
+      'what should i eat',
+      'random meal generator',
+      'food picker',
+      'what to eat generator',
+    ],
+    category: 'Generator',
+    emoji: '🍽️',
+    image: '/tools/random-food-generator.jpg',
+    imageAlt: 'A spread of different dishes on a table',
+    primaryKeyword: 'random food generator',
+    intro:
+      'Can\'t decide what to eat? Pick a meal type — or leave it on Any — and let the generator choose for you. Keep tapping until something sounds good. Perfect for beating decision fatigue at breakfast, lunch, dinner, or dessert.',
+    howItWorks: [
+      { title: 'Pick a meal', description: 'Choose breakfast, lunch, dinner, dessert, snack — or Any for a full surprise.' },
+      { title: 'Tap generate', description: 'The tool randomly picks a dish from that category.' },
+      { title: 'Keep or re-roll', description: 'Like it? Go cook or order it. Not feeling it? Tap again for another idea.' },
+    ],
+    faqs: [
+      {
+        q: 'What does the random food generator do?',
+        a: 'It removes the "what should I eat?" paralysis by picking a meal or snack for you at random. You can narrow it to a specific meal type or let it choose from everything.',
+      },
+      {
+        q: 'Can I filter by meal type?',
+        a: 'Yes. Choose Breakfast, Lunch, Dinner, Dessert, or Snack to get an idea that fits the moment, or pick Any to draw from the whole list.',
+      },
+      {
+        q: 'Is it good for couples or groups who can\'t decide?',
+        a: 'Absolutely — agree to accept whatever it lands on, or take turns re-rolling until everyone is happy. It is a quick, neutral tiebreaker for "you pick / no, you pick".',
+      },
+      {
+        q: 'Are these recipes or just ideas?',
+        a: 'They are dish ideas, not full recipes. Once you have one you like, search it up or order it. The point is to make the decision, fast.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Completely free, no signup, and it runs in your browser. Tap as many times as you like.',
+      },
+    ],
+    relatedSlugs: ['random-emoji-generator', 'viking-name-generator', 'superhero-name-generator'],
+    ctaHook: 'Run a restaurant, café, or food truck? Pixie builds full ordering sites with menus and checkout in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Why a random picker beats endless scrolling',
+    about:
+      'The struggle to decide what to eat has a name — decision fatigue — and it is very real. Every choice you make in a day draws down a limited reserve of mental energy, and by the time you are hungry and tired, even a small decision like "what is for dinner?" can feel disproportionately hard. That is why couples can spend twenty minutes bouncing "I don\'t mind, you choose" back and forth, and why food-delivery apps deliberately show endless scrolling carousels: more options often makes choosing harder, not easier, a phenomenon psychologists call choice overload. A random food generator sidesteps all of that by doing the one thing your tired brain does not want to do — commit. By narrowing the field to a single concrete suggestion, it converts an open-ended, anxiety-inducing question into a simple yes-or-no, which is far easier to answer. If the first pick does not appeal, the act of rejecting it usually clarifies what you actually want, and a couple of re-rolls lands on something. It is a small trick, but it reliably turns "I can\'t decide" into a plan — and for households or groups, agreeing in advance to accept the result removes the social friction of who gets to choose.',
+  },
+  {
+    slug: 'random-emoji-generator',
+    title: 'Random Emoji Generator — Pick Random Emojis Free',
+    h1: 'Random Emoji Generator',
+    shortName: 'Random Emoji Generator',
+    tagline: 'Generate random emojis to copy and paste anywhere.',
+    metaDescription:
+      'Generate random emojis by category and count, then copy and paste anywhere. Pick from smileys, animals, food, hearts, and more. Free, no signup.',
+    keywords: [
+      'random emoji generator',
+      'random emoji',
+      'emoji picker',
+      'emoji generator',
+      'copy paste emoji',
+    ],
+    category: 'Generator',
+    emoji: '🎲',
+    image: '/tools/random-emoji-generator.jpg',
+    imageAlt: 'Colorful emoji icons scattered on a bright background',
+    primaryKeyword: 'random emoji generator',
+    intro:
+      'Spin up random emojis by category and count, then copy and paste them anywhere — captions, bios, messages, usernames. Great for beating writer\'s block on social posts, picking a daily mood, or running emoji games with friends.',
+    howItWorks: [
+      { title: 'Pick a category', description: 'All, Smileys, Animals, Food, Hearts, Hands, Travel, or Symbols.' },
+      { title: 'Choose how many', description: 'Get 1, 3, 5, or 10 random emojis at once.' },
+      { title: 'Copy and paste', description: 'Tap copy and drop them into any app — they are real Unicode emojis.' },
+    ],
+    faqs: [
+      {
+        q: 'What does the random emoji generator do?',
+        a: 'It picks random emojis for you from the category you choose, so you do not have to scroll the whole keyboard. Copy the set and paste it anywhere that supports emojis.',
+      },
+      {
+        q: 'Will the emojis work everywhere?',
+        a: 'Yes — these are standard Unicode emojis, so they render and copy into Instagram, TikTok, WhatsApp, Discord, X, and virtually any modern app or document. Exact artwork varies slightly by device, which is normal.',
+      },
+      {
+        q: 'What can I use it for?',
+        a: 'Spicing up captions and bios, picking a random "mood of the day", emoji guessing games (describe a movie in emojis), icebreakers, and decorating usernames or headings.',
+      },
+      {
+        q: 'Can I get just one emoji or a whole set?',
+        a: 'Both. Set the count to 1 for a single pick or up to 10 for a string of them. Hit shuffle for a fresh set anytime.',
+      },
+      {
+        q: 'Is it free and private?',
+        a: 'Yes. No signup, and it runs entirely in your browser — nothing is sent anywhere.',
+      },
+    ],
+    relatedSlugs: ['fancy-text-generator', 'heart-symbol-generator', 'random-food-generator'],
+    ctaHook: 'Run a social media or content brand? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'A short history of emoji',
+    about:
+      'Emoji began in late-1990s Japan, where designer Shigetaka Kurita created a set of 176 tiny 12×12-pixel icons for a mobile internet platform, giving texters a way to add tone and emotion to short messages. The word itself is Japanese — e (picture) plus moji (character) — and its resemblance to "emotion" is a happy coincidence. Emoji went global once Unicode began standardizing them in 2010, which is the crucial detail behind a tool like this: because each emoji is an official Unicode character rather than an image, it copies and pastes between apps and devices the same way letters do. What differs is the artwork — Apple, Google, Samsung, and Microsoft each draw their own version of the same code point, which is why the "grinning face" you send from an iPhone looks a little different on an Android. Today there are well over three thousand emojis, with new ones added each year by the Unicode Consortium through a formal proposal process. They have become a genuine layer of digital language: studies of online communication show emojis carry real pragmatic meaning, softening requests, signalling tone, and replacing the body language that text strips away. A random picker is a playful slice of that — useful for sparking caption ideas, running guessing games, or just adding a little personality to a message you would otherwise send plain.',
+  },
+  {
+    slug: 'xbox-gamertag-generator',
+    title: 'Xbox Gamertag Generator — Cool Username Ideas',
+    h1: 'Xbox Gamertag Generator',
+    shortName: 'Xbox Gamertag Generator',
+    tagline: 'Generate cool gamertag and username ideas instantly.',
+    metaDescription:
+      'Generate unique, cool Xbox gamertag and username ideas instantly. Free online tool — no signup, no install. Find a gamertag that actually sounds good.',
+    keywords: [
+      'xbox gamertag generator',
+      'gamertag generator',
+      'xbox name generator',
+      'gaming username generator',
+      'twitch username generator',
+    ],
+    category: 'Generator',
+    emoji: '🎮',
+    image: '/tools/xbox-gamertag-generator.jpg',
+    imageAlt: 'Game controller glowing on a dark desk setup',
+    primaryKeyword: 'xbox gamertag generator',
+    intro:
+      'Generate cool gamertag and username ideas for Xbox, PlayStation, Steam, Twitch, and Discord. Toggle numbers, leetspeak, and the classic xX_ _Xx styling, then copy your favorite. Gamertags must be unique, so generate a batch and check availability.',
+    howItWorks: [
+      { title: 'Set your style', description: 'Toggle numbers, leetspeak (3, 0, 7…), and the xX_ _Xx wrap.' },
+      { title: 'Generate a batch', description: 'Get a set of fresh gamertag ideas built from edgy adjective + noun combos.' },
+      { title: 'Copy and claim', description: 'Copy one you like and check if it is available on your platform.' },
+    ],
+    faqs: [
+      {
+        q: 'What makes a good gamertag?',
+        a: 'Short, memorable, easy to say in voice chat, and ideally without confusing number/letter swaps. A strong tag pairs a punchy adjective with a noun (ShadowSniper, FrostByte) and avoids anything you will be embarrassed by in a year.',
+      },
+      {
+        q: 'Does this work for PlayStation, Steam, Twitch, and Discord too?',
+        a: 'Yes. Despite the name, the ideas work for any gaming or streaming handle — PSN online IDs, Steam names, Twitch usernames, Discord, and more. The generator does not check Xbox specifically; it gives you ideas.',
+      },
+      {
+        q: 'Why do I need numbers or leetspeak?',
+        a: 'Popular words are usually already taken, so adding numbers or swapping letters for look-alikes (e for 3, o for 0) helps you find an available variant. Toggle them on if your first choices are gone.',
+      },
+      {
+        q: 'Will the gamertag be available?',
+        a: 'Maybe — gamertags must be unique on each platform, and this tool generates ideas rather than checking availability. Generate several, then try them on Xbox/PSN/Steam to see which are free.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes, completely free and no signup. Generate as many as you want.',
+      },
+    ],
+    relatedSlugs: ['viking-name-generator', 'fancy-text-generator', 'glitch-text-generator'],
+    ctaHook: 'Building a gaming brand, team, or Twitch channel? Pixie builds your full website in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'The art of the gamertag',
+    about:
+      'A gamertag is the name you live under online, and Microsoft popularized the term with the original Xbox Live in 2002 — a single identity that follows you across every game and the social graph around it. Good ones share a few traits: they are short enough to type and say, distinctive enough to remember, and free of the kind of joke that gets stale fast. The hard part is that they must be unique, and with hundreds of millions of accounts the obvious words went years ago, which is exactly why number suffixes and "leetspeak" letter swaps exist — turning "Sniper" into "Sn1per" or appending a year reclaims a taken idea without abandoning it. The decorative xX_Name_Xx wrap is a nostalgic relic of the Xbox 360 and early YouTube era that has cycled back into ironic popularity. A generator helps because naming yourself from a blank slate is genuinely hard; seeing dozens of adjective-plus-noun combinations sparks recognition — you know the right one when you see it. Worth remembering: most platforms now let you change your display name (Xbox gives you one free change, then charges), so you are not locked in forever, but a tag you actually like is one less thing to overthink before you get into the game.',
+  },
+  {
+    slug: 'viking-name-generator',
+    title: 'Viking Name Generator — Norse Names for Warriors',
+    h1: 'Viking Name Generator',
+    shortName: 'Viking Name Generator',
+    tagline: 'Generate authentic-sounding Norse Viking names.',
+    metaDescription:
+      'Generate authentic-sounding Norse Viking names for characters, games, or fun. Tap once for a name, keep going until you find the perfect one. Free, no signup.',
+    keywords: [
+      'viking name generator',
+      'norse name generator',
+      'viking names',
+      'norse names',
+      'nordic name generator',
+    ],
+    category: 'Generator',
+    emoji: '⚔️',
+    image: '/tools/viking-name-generator.jpg',
+    imageAlt: 'Norse longship and shields by a misty fjord',
+    primaryKeyword: 'viking name generator',
+    intro:
+      'Generate authentic-sounding Viking names — a Norse first name paired with an earned byname, like Ragnar Bloodaxe or Astrid the Fearless. Perfect for D&D and RPG characters, gamer handles, fantasy writing, and re-enactment. Hit generate for a fresh raiding party.',
+    howItWorks: [
+      { title: 'Tap generate', description: 'Get a batch of Norse names, each a first name plus a byname.' },
+      { title: 'Browse the set', description: 'Scan the list for one that fits your character or vibe.' },
+      { title: 'Copy your pick', description: 'Copy the name and use it for your character, handle, or story.' },
+    ],
+    faqs: [
+      {
+        q: 'Are these real Viking names?',
+        a: 'They are built from authentic Old Norse given names (Ragnar, Bjorn, Astrid, Sigrid) and the kind of descriptive bynames Vikings actually used. The combinations are generated for fun rather than pulled from a specific historical record, so they sound right without being tied to one real person.',
+      },
+      {
+        q: 'What is a byname?',
+        a: 'Vikings did not use family surnames the way we do; they used patronymics (Eriksson, "son of Erik") and earned nicknames called bynames — like "the Boneless", "Forkbeard", or "Bloodaxe" — that described a trait, deed, or appearance. The generator gives you a first name plus one of these bynames.',
+      },
+      {
+        q: 'Can I use these for D&D or video games?',
+        a: 'Yes — they are popular for D&D and tabletop characters, Skyrim and other RPG playthroughs, gamer handles, and fantasy fiction. Copy any name and use it freely.',
+      },
+      {
+        q: 'Do they work for male and female characters?',
+        a: 'Yes. The first-name pool includes both traditionally male and female Old Norse names, so re-roll until you get one that fits your character.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Completely free, no signup, runs in your browser. Generate as many as you like.',
+      },
+    ],
+    relatedSlugs: ['pirate-name-generator', 'anime-name-generator', 'superhero-name-generator'],
+    ctaHook: 'Building a game, brand, or fantasy project? Pixie builds full websites from one WhatsApp message.',
+    aboutHeading: 'How Vikings really named themselves',
+    about:
+      'Norse naming worked very differently from the modern first-name-plus-surname system. A Viking had a given name and then, instead of an inherited family name, a patronymic built from their father\'s name: Erik\'s son Leif was Leif Eriksson, and his daughter would be Eriksdóttir. On top of that, many Norse people picked up a byname — an earned nickname that stuck — and these are the part that feels most "Viking" to modern ears. They could be flattering or brutally literal: Harald Fairhair for his famous mane, Ivar the Boneless (historians still debate whether it referred to a physical condition or a metaphor), Eric Bloodaxe for obvious reasons, and Thorbjorn Skullsplitter for, presumably, similar ones. Bynames did real work in a world where the same dozen given names recurred constantly; they disambiguated people and broadcast reputation. This generator leans into that tradition by pairing a genuine Old Norse given name with a descriptive byname, which is why the results feel authentic even though the specific combinations are invented. For storytelling, tabletop characters, or a gamertag with some saga energy, the byname is what gives a name its bite — anyone can be "Bjorn", but "Bjorn Ironside" sounds like he has a story worth hearing.',
+  },
+  {
+    slug: 'superhero-name-generator',
+    title: 'Superhero Name Generator — Epic Hero & Villain Names',
+    h1: 'Superhero Name Generator',
+    shortName: 'Superhero Name Generator',
+    tagline: 'Generate epic superhero names and alter egos.',
+    metaDescription:
+      'Generate epic superhero names and alter egos in seconds. Great for comics, games, costumes, and creative writing. Free superhero name generator, no signup.',
+    keywords: [
+      'superhero name generator',
+      'generate a superhero name',
+      'hero name generator',
+      'superhero names',
+      'alter ego generator',
+    ],
+    category: 'Generator',
+    emoji: '🦸',
+    image: '/tools/superhero-name-generator.jpg',
+    imageAlt: 'Silhouette of a caped hero against a dramatic sky',
+    primaryKeyword: 'generate a superhero name',
+    intro:
+      'Generate epic superhero names and alter egos — The Crimson Falcon, Midnight Striker, Quantum Reaper. Built from the classic adjective-plus-noun formula comic writers have used for decades. Perfect for stories, games, costumes, team names, and just for fun.',
+    howItWorks: [
+      { title: 'Tap generate', description: 'Get a batch of hero names mixing bold adjectives with punchy nouns.' },
+      { title: 'Find your alias', description: 'Scan for the one that sounds like your hero (or villain).' },
+      { title: 'Copy and use it', description: 'Copy the name for your story, character, costume, or team.' },
+    ],
+    faqs: [
+      {
+        q: 'How does the superhero name generator work?',
+        a: 'It uses the time-tested comic-book formula — a vivid adjective (Crimson, Midnight, Quantum) plus a strong noun (Falcon, Striker, Reaper), sometimes with "The" in front. That structure is exactly how many famous hero names are built.',
+      },
+      {
+        q: 'Can I use these names for stories or games?',
+        a: 'Yes — they are great for fiction, comics, D&D and RPG characters, cosplay personas, team and squad names, and social handles. Generated names are free to use.',
+      },
+      {
+        q: 'Do these work for villains too?',
+        a: 'Definitely. The darker adjective-noun pairings (Obsidian Viper, Inferno Warden) read as villains just as easily as heroes — same formula, different vibe.',
+      },
+      {
+        q: 'Can it make a name from my own name?',
+        a: 'This version generates fresh random aliases rather than transforming your real name. Generate a batch and pick the one that feels like your secret identity.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes — free, no signup, runs in your browser. Generate as many as you want.',
+      },
+    ],
+    relatedSlugs: ['viking-name-generator', 'pirate-name-generator', 'xbox-gamertag-generator'],
+    ctaHook: 'Building a comic, game, or creative brand? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'The formula behind great hero names',
+    about:
+      'Superhero names are a tiny, almost mathematical art form. Look across a century of comics and a clear pattern emerges: the most memorable aliases are usually one or two strong syllabic beats built on a vivid modifier and a concrete noun. Sometimes the noun is the whole identity (Batman, Superman, Wolverine), but a huge share follow the adjective-plus-noun or "The [Adjective] [Noun]" shape that this generator uses, because that structure does two jobs at once — it hints at a power or theme (Crimson suggests blood or fire, Midnight suggests stealth) while staying punchy enough to shout in a fight scene. Alliteration is the other open secret of the genre: Marvel\'s Stan Lee famously gave characters alliterative real names — Peter Parker, Bruce Banner, Reed Richards, Sue Storm — partly so he could remember them, and that musicality carries into hero aliases too. Good names also leave room for the costume and the story; "Striker" tells you nothing about powers, which is a feature, because it lets the character define the name rather than the other way around. Whether you are naming a protagonist, a tabletop character, a cosplay persona, or a team, the trick is to say the name out loud — if it sounds like something a narrator could announce as the hero bursts through a wall, it works.',
+  },
+  {
+    slug: 'speech-bubble-meme-generator',
+    title: 'Speech Bubble Meme Generator — Add Bubbles to Photos',
+    h1: 'Speech Bubble Meme Generator',
+    shortName: 'Speech Bubble Meme Generator',
+    tagline: 'Add a classic reaction speech bubble to any image.',
+    metaDescription:
+      'Add a classic white speech bubble to any photo and create reaction memes instantly. Free in-browser meme generator — upload, customize, and download. No signup.',
+    keywords: [
+      'speech bubble meme generator',
+      'speech bubble generator',
+      'add speech bubble to image',
+      'reaction meme generator',
+      'meme speech bubble',
+    ],
+    category: 'Generator',
+    emoji: '💬',
+    image: '/tools/speech-bubble-meme-generator.jpg',
+    imageAlt: 'A white comic speech bubble over a photo',
+    primaryKeyword: 'speech bubble meme generator',
+    intro:
+      'Drop a white "reaction" speech bubble onto any image — the classic meme overlay used on GIFs and reaction shots. Upload a picture, position the tail, optionally add text, and download a transparent-ready PNG. Everything happens in your browser.',
+    howItWorks: [
+      { title: 'Upload an image', description: 'Drop in any photo or screenshot. A still frame works best.' },
+      { title: 'Place the bubble', description: 'Choose the tail position (left, center, right), size the bubble, and add optional text.' },
+      { title: 'Download the PNG', description: 'Export the finished image and share it, or layer it onto a GIF in your editor.' },
+    ],
+    faqs: [
+      {
+        q: 'What is a reaction speech bubble meme?',
+        a: 'It is the white speech bubble with a downward-pointing tail placed at the top of an image or GIF, making it look like the subject is "saying" something — usually left blank so the caption does the talking, or filled with a short line. It blew up on Discord, iMessage, and Tumblr as a reaction format.',
+      },
+      {
+        q: 'Can I use it on a GIF?',
+        a: 'This tool adds the bubble to a static image and exports a PNG. To put it on a GIF, generate the bubble on a representative frame, then overlay the PNG in a GIF/video editor — or screenshot the GIF, add the bubble, and post the still.',
+      },
+      {
+        q: 'Is my image uploaded anywhere?',
+        a: 'No. The image is drawn and composited entirely in your browser using a canvas, so nothing is uploaded to a server. It is safe for private screenshots.',
+      },
+      {
+        q: 'Can I leave the bubble empty?',
+        a: 'Yes — the classic look is an empty white bubble so the joke lives in the caption you write when you post it. Adding text inside is optional.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes, free and no signup. Make as many as you like.',
+      },
+    ],
+    relatedSlugs: ['fire-text-generator', 'cool-text-generator', 'random-emoji-generator'],
+    ctaHook: 'Run a meme page or social brand? Pixie builds full websites and link-in-bio pages in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How the reaction bubble took over the internet',
+    about:
+      'The speech-bubble reaction meme is one of those formats that feels like it has always existed but actually spread very deliberately. The idea is simple: overlay the universally recognized comic speech balloon — a rounded white shape with a tail pointing at a "speaker" — onto a photo or GIF so the subject appears to be talking, then let the surrounding caption supply the punchline. Its modern explosion came from messaging culture, especially Discord and iMessage, where a blank bubble pinned to the top of a GIF became shorthand for "this is exactly what I want to say right now." Leaving the bubble empty is part of the genius: an empty balloon is a fill-in-the-blank, infinitely reusable across contexts, which is precisely the quality that makes a meme template spread. The comic speech balloon itself is a much older invention, with roots stretching back centuries to "speech scrolls" in medieval and Mesoamerican art and formalized in early twentieth-century newspaper comics; the downward tail evolved as the convention for pointing at whoever is speaking. This tool recreates that overlay on a canvas in your browser — you choose where the tail points and how big the bubble sits, optionally drop in a line of text, and export a clean PNG. Because the compositing is local, it works on private screenshots without anything leaving your device, and the transparent-ready output drops neatly onto the original GIF or image in any editor.',
+  },
+  {
+    slug: 'fire-text-generator',
+    title: 'Fire Text Generator — Flame & Burning Text Effects',
+    h1: 'Fire Text Generator',
+    shortName: 'Fire Text Generator',
+    tagline: 'Turn text into blazing fire and flame graphics.',
+    metaDescription:
+      'Turn any text into blazing fire and flame graphics for free. Create fire text effects for thumbnails, logos, and social posts. No signup, instant results.',
+    keywords: [
+      'fire text generator',
+      'flame text generator',
+      'fire text',
+      'burning text generator',
+      'flaming text',
+    ],
+    category: 'Generator',
+    emoji: '🔥',
+    image: '/tools/fire-text-generator.jpg',
+    imageAlt: 'Glowing letters made of flames on a dark background',
+    primaryKeyword: 'fire text generator',
+    intro:
+      'Turn any word into blazing fire text — molten yellow-to-red gradients with a hot glow. Pick a flame style, preview live, and download a transparent PNG for thumbnails, banners, logos, and gaming graphics. Renders entirely in your browser.',
+    howItWorks: [
+      { title: 'Type your text', description: 'Enter a word or short phrase — titles and logos work best.' },
+      { title: 'Pick a flame style', description: 'Blaze, Ember, or Inferno — each with its own heat and glow.' },
+      { title: 'Download the PNG', description: 'Export a transparent, retina-crisp PNG ready for any design.' },
+    ],
+    faqs: [
+      {
+        q: 'What does the fire text generator make?',
+        a: 'It renders your text as a flaming graphic — a hot color gradient with a glowing aura — and exports it as a transparent PNG image, not as font characters. Drop it onto thumbnails, banners, or logos.',
+      },
+      {
+        q: 'Is the image free to use?',
+        a: 'Yes. The PNG is free for personal and commercial use, with no watermark and no attribution required.',
+      },
+      {
+        q: 'Why an image and not copy-paste text?',
+        a: 'Glow and gradient effects cannot be expressed with plain Unicode characters, so fire text has to be rendered as an image. For copy-paste styled letters, try the Fancy Text Generator instead.',
+      },
+      {
+        q: 'Does it have a transparent background?',
+        a: 'Yes — the export is transparent, so it sits cleanly on dark thumbnails, banners, or photos without a box around it.',
+      },
+      {
+        q: 'Does it work on mobile?',
+        a: 'Yes. It renders in any modern mobile browser and downloads straight to your device. Everything runs locally.',
+      },
+    ],
+    relatedSlugs: ['cool-text-generator', 'glitch-text-generator', 'speech-bubble-meme-generator'],
+    ctaHook: 'Need a full logo or brand identity, not just text art? Pixie delivers logos, websites, and ads from one WhatsApp message.',
+    aboutHeading: 'Faking fire with light and gradient',
+    about:
+      'Fire text is a classic piece of "word art" that has been a staple of the web since the days of early logo-maker sites, and the way it is faked is a neat little lesson in how digital flame works. Real fire reads as fire to our eyes because of a specific brightness gradient — white-hot and yellow at the base where combustion is hottest, shading up through orange to deep red at the cooler edges — combined with a soft glow that bleeds light onto everything around it. This generator reproduces both: it paints a vertical color ramp into each letterform (the Inferno style adds a white-hot core for extra heat) and then draws the text twice with a blurred, warm-colored shadow to simulate the glow a flame casts. Because it is drawn on an HTML canvas rather than built from a font, the result is a true image you can export with a transparent background and drop onto a dark thumbnail or banner. The trade-off is the same as any graphic-text tool: it is a picture, not editable type, and not a scalable vector, so it shines for one-off titles and decorative headers rather than body text or a logo you will need at every size. For a YouTube thumbnail, a stream overlay, a gaming clan banner, or a poster headline, though, a few seconds of fire text does a lot of visual work — heat and energy read instantly, which is exactly why the effect has stayed popular for decades.',
+  },
+  {
+    slug: 'pirate-name-generator',
+    title: 'Pirate Name Generator — Swashbuckling Name Ideas',
+    h1: 'Pirate Name Generator',
+    shortName: 'Pirate Name Generator',
+    tagline: 'Generate swashbuckling pirate names and aliases.',
+    metaDescription:
+      'Generate swashbuckling pirate names and aliases in one click. Perfect for costumes, games, and characters. Free pirate name generator — no signup needed.',
+    keywords: [
+      'pirate name generator',
+      'pirate names',
+      'generate pirate name',
+      'pirate name ideas',
+      'random pirate name',
+    ],
+    category: 'Generator',
+    emoji: '🏴‍☠️',
+    image: '/tools/pirate-name-generator.jpg',
+    imageAlt: 'Pirate ship sailing under a skull-and-crossbones flag',
+    primaryKeyword: 'pirate name generator',
+    intro:
+      'Generate swashbuckling pirate names — Captain Jack Blackheart, Mad Anne Bones, Salty "Dread" Saltbeard. Perfect for D&D and RPG characters, gamer handles, party themes, stories, and Talk Like a Pirate Day. Hit generate for a fresh crew.',
+    howItWorks: [
+      { title: 'Tap generate', description: 'Get a batch of pirate names mixing titles, first names, and fearsome surnames.' },
+      { title: 'Pick your captain', description: 'Scan the list for the alias that suits your buccaneer.' },
+      { title: 'Copy your pick', description: 'Copy the name for your character, handle, or story.' },
+    ],
+    faqs: [
+      {
+        q: 'How does the pirate name generator work?',
+        a: 'It combines piratey titles (Captain, Mad, One-Eyed), classic first names (Jack, Anne, Morgan), and fearsome surnames (Blackheart, Bones, Saltbeard) into swashbuckling aliases, sometimes with a nickname in quotes.',
+      },
+      {
+        q: 'What can I use a pirate name for?',
+        a: 'D&D and tabletop characters, video-game handles, pirate-themed parties, story and novel characters, Talk Like a Pirate Day (September 19), and team or crew names. Generated names are free to use.',
+      },
+      {
+        q: 'Do these work for any gender?',
+        a: 'Yes — the name pool includes options like Anne, Mary, and Grace alongside Jack, Edward, and Morgan, so re-roll until you find one that fits your character.',
+      },
+      {
+        q: 'Are these based on real pirates?',
+        a: 'They are inspired by the style of the golden age of piracy — names like Blackbeard, Calico Jack, and Anne Bonny — but generated for fun rather than copied from history.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Completely free, no signup, runs in your browser. Generate as many as you like.',
+      },
+    ],
+    relatedSlugs: ['viking-name-generator', 'anime-name-generator', 'superhero-name-generator'],
+    ctaHook: 'Building a game, theme bar, or event brand? Pixie builds full websites from one WhatsApp message.',
+    aboutHeading: 'How pirates earned their names',
+    about:
+      'The pirates of the so-called golden age — roughly the late 1600s to the 1720s — are remembered as much for their names as their deeds, and there is a real pattern behind the theatrics. Many sailing under the black flag used aliases rather than their birth names, partly to protect families back home from the consequences of being kin to a wanted criminal, and partly because a fearsome name was itself a weapon. Edward Teach became "Blackbeard" and deliberately cultivated the legend, reportedly weaving lit slow-match into his beard to wreathe himself in smoke during a fight; the goal was to terrify a merchant crew into surrendering without a shot, because a bloodless capture was a profitable one. Others carried descriptive monikers in the same spirit as Viking bynames — "Calico Jack" Rackham for his bright cotton clothes, "Black Bart" Roberts, the most successful pirate of the era by sheer number of ships taken. Notably, two of the most famous figures were women, Anne Bonny and Mary Read, who sailed with Rackham and fought as fiercely as any of the crew. This generator riffs on that whole tradition — a title, a first name, and a vivid surname or nickname — to produce aliases that sound like they belong on a wanted poster. For a tabletop character, a gamer handle, or a story, the right pirate name does the same job it did three centuries ago: it sets a reputation before you have done anything to earn it.',
+  },
+  {
+    slug: 'anime-name-generator',
+    title: 'Anime Name Generator — Japanese Anime Character Names',
+    h1: 'Anime Name Generator',
+    shortName: 'Anime Name Generator',
+    tagline: 'Generate anime-style Japanese names for characters.',
+    metaDescription:
+      'Generate anime-style Japanese names for your characters instantly. Great for OCs, fan fiction, games, and roleplay. Free anime name generator, no signup.',
+    keywords: [
+      'anime name generator',
+      'japanese name generator',
+      'anime names',
+      'anime character name generator',
+      'oc name generator',
+    ],
+    category: 'Generator',
+    emoji: '🌸',
+    image: '/tools/anime-name-generator.jpg',
+    imageAlt: 'Cherry blossoms against a soft pastel sky',
+    primaryKeyword: 'anime name generator',
+    intro:
+      'Generate anime-style Japanese names — a given name paired with a surname, like Akira Tanaka or Yuki Nakamura. Perfect for original characters (OCs), role-play, fan fiction, and gaming avatars. Hit generate for a fresh cast.',
+    howItWorks: [
+      { title: 'Tap generate', description: 'Get a batch of anime-style names, each a given name plus a surname.' },
+      { title: 'Cast your character', description: 'Browse the list for the one that suits your OC or avatar.' },
+      { title: 'Copy your pick', description: 'Copy the name for your character, story, or profile.' },
+    ],
+    faqs: [
+      {
+        q: 'How does the anime name generator work?',
+        a: 'It pairs a Japanese-style given name (Akira, Sakura, Ren, Yuki) with a common surname (Tanaka, Sato, Nakamura) to create names that fit the anime and manga aesthetic. In Japanese order the surname comes first, but the generator shows given-name-first for familiarity.',
+      },
+      {
+        q: 'What can I use these names for?',
+        a: 'Original characters (OCs), fan fiction, role-play, gaming avatars and usernames, and creative writing. Generated names are free to use.',
+      },
+      {
+        q: 'Are these real Japanese names?',
+        a: 'They are built from real, common Japanese given names and surnames, so they read as authentic. The specific combinations are generated for you rather than belonging to a real individual.',
+      },
+      {
+        q: 'Do the names work for any gender?',
+        a: 'Yes — the given-name pool includes names used across genders and some that are more specifically masculine or feminine, so generate a few and pick what fits your character.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes — free, no signup, runs in your browser. Generate as many as you want.',
+      },
+    ],
+    relatedSlugs: ['viking-name-generator', 'pirate-name-generator', 'superhero-name-generator'],
+    ctaHook: 'Building an anime, gaming, or creator brand? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How Japanese names actually work',
+    about:
+      'Anime names feel distinctive because Japanese naming follows conventions quite different from Western ones, and understanding them makes a generated name land better. The first thing to know is order: in Japanese, the family name comes before the given name — the character Western fans call "Naruto Uzumaki" is "Uzumaki Naruto" in Japan — though media localized for English audiences usually flips it to given-name-first, which is the order this tool uses for familiarity. Given names carry a lot of meaning because they are written in kanji, characters that each hold significance; a name like Hikari can mean "light", Sora "sky", Haru "spring", and parents often choose kanji deliberately for the qualities they hope a child embodies. The same sound can be written with different kanji to mean different things, which is a layer of nuance Western names rarely have. Surnames, by contrast, are hugely varied — Japan has well over a hundred thousand of them, many rooted in geography and nature (Tanaka means "in the rice field", Yamamoto "base of the mountain", Kobayashi "small forest"). Anime and manga creators pick names the way novelists everywhere do — for sound, for meaning, sometimes for a pun or a hint about the character — which is why a good anime name feels expressive. This generator pairs authentic given names with common surnames so the results sit naturally in that tradition, ready for an OC, a story, or an avatar.',
+  },
+  {
+    slug: 'mission-statement-generator',
+    title: 'Mission Statement Generator — Write Yours in Seconds',
+    h1: 'Mission Statement Generator',
+    shortName: 'Mission Statement Generator',
+    tagline: 'Write a clear company mission statement in seconds.',
+    metaDescription:
+      'Write a clear, professional company mission statement in seconds. Answer a few quick questions and get a polished result instantly. Free, no signup required.',
+    keywords: [
+      'mission statement generator',
+      'mission statement maker',
+      'company mission statement',
+      'mission statement examples',
+      'free mission statement generator',
+    ],
+    category: 'Generator',
+    emoji: '🎯',
+    image: '/tools/mission-statement-generator.jpg',
+    imageAlt: 'A team reviewing goals on a whiteboard',
+    primaryKeyword: 'mission statement generator',
+    intro:
+      'Write a clear, professional mission statement in seconds. Enter what you do, who you serve, and your core value, and the generator gives you several polished one-sentence options to choose from and refine. Free, instant, and private — nothing is uploaded.',
+    howItWorks: [
+      { title: 'Fill in four fields', description: 'Company name, what you do, who you serve, and your core value.' },
+      { title: 'Generate options', description: 'Get several mission-statement variants built from proven structures.' },
+      { title: 'Pick and polish', description: 'Copy the one you like best and tweak the wording to sound like you.' },
+    ],
+    faqs: [
+      {
+        q: 'What makes a good mission statement?',
+        a: 'A strong mission statement is one clear sentence that says what you do, who you do it for, and why it matters — without jargon. It should be specific enough to guide decisions and short enough that your team can remember it.',
+      },
+      {
+        q: 'How is this different from a vision statement?',
+        a: 'A mission statement describes what you do today and for whom; a vision statement describes the future you are working toward. This tool focuses on the mission — your present purpose — which is the one customers and new hires read first.',
+      },
+      {
+        q: 'Does it use AI?',
+        a: 'No — it builds your statement from proven sentence structures using the details you enter, so it is instant, free, and completely private. You stay in control of every word.',
+      },
+      {
+        q: 'Can I use the result on my website or pitch deck?',
+        a: 'Yes. Pick the variant you like, refine the wording, and use it on your About page, pitch deck, careers page, or investor materials. It is yours to edit freely.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes — free, no signup, and nothing you type is sent to a server.',
+      },
+    ],
+    relatedSlugs: ['trust-badge-generator', 'da-pa-checker', 'text-summarizer'],
+    ctaHook: 'Got your mission? Pixie turns it into a full brand and website — logo, copy, and pages — from one WhatsApp message.',
+    aboutHeading: 'What a mission statement is really for',
+    about:
+      'A mission statement is one of the most misunderstood pieces of business writing — treated as a box-ticking exercise that ends up as a wall of vague buzzwords nobody can recite. Done well, it is the opposite: a single, plain sentence that answers what you do, who you serve, and why it matters, and that quietly steers a hundred small decisions. The best-known examples are striking precisely because they are concrete. TED\'s is "Spread ideas." Google\'s longtime mission was "to organize the world\'s information and make it universally accessible and useful." Patagonia\'s — "We\'re in business to save our home planet" — is short enough to fit on a sticker and pointed enough that employees can use it to argue for or against a decision. What these share is specificity and brevity; they avoid the trap of trying to please everyone with words like "world-class", "synergy", and "innovative", which sound impressive and mean nothing. A useful mission statement passes a simple test: could it help an employee decide between two options, and would a customer understand it instantly? This generator gets you to a solid first draft by plugging your specifics into proven sentence structures, which is the hard part — staring at a blank page. The real work after that is subtraction: cut the adjectives, make every word earn its place, and read it aloud until it sounds like a person rather than a committee. Once it does, it becomes the spine of everything outward-facing — your About page, your pitch, your hiring — which is exactly the foundation a brand and website get built on.',
+  },
+  {
+    slug: 'qr-code-generator',
+    title: 'QR Code Generator — Free Custom QR Codes',
+    h1: 'Pixie QR Code Generator',
+    shortName: 'QR Code Generator',
+    tagline: 'Turn any link or text into a downloadable QR code.',
+    metaDescription:
+      'Create custom QR codes free with this QR code generator. Turn any link or text into a downloadable PNG. Pick the size and color. No signup.',
+    keywords: [
+      'qr code generator',
+      'qr generator',
+      'free qr code',
+      'create qr code',
+      'qr code maker',
+    ],
+    category: 'Converter',
+    emoji: '🔲',
+    image: '/tools/qr-code-generator.jpg',
+    imageAlt: 'A smartphone scanning a QR code',
+    primaryKeyword: 'qr code generator',
+    intro:
+      'Turn any link, text, phone number, or Wi-Fi detail into a crisp QR code in seconds. Pick the size and color, preview live, and download a high-resolution PNG ready for print, packaging, menus, posters, or your storefront. Everything generates in your browser.',
+    howItWorks: [
+      { title: 'Enter your content', description: 'Paste a URL or any text you want the QR code to open or display.' },
+      { title: 'Style it', description: 'Set the size and pick a color that matches your brand.' },
+      { title: 'Download the PNG', description: 'Export a high-resolution QR code ready for screen or print.' },
+    ],
+    faqs: [
+      {
+        q: 'Do these QR codes expire?',
+        a: 'No. This tool makes static QR codes that encode your link or text directly, so they never expire and have no scan limits or tracking. The code works as long as the destination (your URL) exists.',
+      },
+      {
+        q: 'What can I put in a QR code?',
+        a: 'Anything text-based: a website URL, plain text, a phone number, an email, an SMS, or Wi-Fi credentials. The most common use is linking to a web page, menu, or social profile.',
+      },
+      {
+        q: 'Is the QR code free for commercial use?',
+        a: 'Yes — the PNG is free for personal and commercial use, with no watermark and no attribution required. Put it on packaging, flyers, menus, business cards, anything.',
+      },
+      {
+        q: 'Why should I keep good contrast and size?',
+        a: 'Scanners need clear contrast between the code and its background, and enough physical size to resolve the pattern. Keep a dark code on a light background, leave the quiet margin around it, and size up for print — especially for codes scanned from a distance.',
+      },
+      {
+        q: 'Is my data uploaded?',
+        a: 'No. The QR code is generated entirely in your browser, so the link or text you encode never touches a server.',
+      },
+    ],
+    relatedSlugs: ['color-picker', 'image-resizer', 'trust-badge-generator'],
+    ctaHook: 'Want the website that QR code points to? Pixie builds your full site in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How QR codes actually work',
+    about:
+      'The QR code — short for "Quick Response" code — was invented in 1994 by Masahiro Hara at the Japanese company Denso Wave, originally to track car parts on Toyota assembly lines. Its breakthrough over the old one-dimensional barcode was storing data in two dimensions, across both width and height, which lets a small square hold thousands of characters and be read from any angle at high speed. The three large squares in the corners are finding patterns that tell a scanner where the code is and how it is oriented, which is why a QR code still scans when it is rotated or slightly skewed. Crucially, QR codes include built-in error correction using Reed–Solomon math, so they keep working even when part of the code is dirty, damaged, or covered by a logo — depending on the level, up to about 30% of the code can be obscured and still resolve, which is how branded QR codes with a logo in the middle are possible. There are two practical flavours: static codes, like the ones this tool makes, which encode the destination directly and therefore never expire or track you; and dynamic codes, which encode a short redirect URL so the destination can be changed later and scans can be counted (those depend on a third-party service staying alive). For most needs — a link on a flyer, a menu, a business card, a product label — a static code is simpler, free, and permanent. The two things that make a code reliable are contrast and size: keep it dark-on-light, preserve the quiet margin around it, and print it large enough for the scanning distance.',
+  },
+  {
+    slug: 'word-counter',
+    title: 'Word Counter — Free Word & Character Count',
+    h1: 'Pixie Word Counter',
+    shortName: 'Word Counter',
+    tagline: 'Count words, characters, sentences, and reading time live.',
+    metaDescription:
+      'Count words, characters, sentences, and reading time with this free word counter. Live results as you type. No signup, fully private.',
+    keywords: [
+      'word counter',
+      'character counter',
+      'word count tool',
+      'count words',
+      'words to characters',
+    ],
+    category: 'Calculator',
+    emoji: '🔢',
+    image: '/tools/word-counter.jpg',
+    imageAlt: 'A writer typing on a laptop with text on screen',
+    primaryKeyword: 'word counter',
+    intro:
+      'Paste or type your text and instantly see the word count, character count (with and without spaces), sentences, paragraphs, and estimated reading time. Perfect for essays, social posts, SEO meta tags, and any task with a length limit. Everything updates live in your browser.',
+    howItWorks: [
+      { title: 'Type or paste', description: 'Drop in any text — an essay, caption, email, or article.' },
+      { title: 'Read the live counts', description: 'Words, characters, sentences, paragraphs, and reading time update as you type.' },
+      { title: 'Hit your target', description: 'Trim or expand until you meet the limit you are writing to.' },
+    ],
+    faqs: [
+      {
+        q: 'How is a "word" counted?',
+        a: 'A word is any run of non-space characters separated by whitespace, which matches how word processors and most platforms count. So "well-known" counts as one word and "I\'m" counts as one.',
+      },
+      {
+        q: 'What is the difference between the two character counts?',
+        a: '"Characters" counts everything including spaces and line breaks — useful for Twitter/X, SMS, and meta descriptions. "Characters (no spaces)" excludes whitespace, which some assignments and forms ask for.',
+      },
+      {
+        q: 'How is reading time estimated?',
+        a: 'Reading time assumes an average adult reading pace of roughly 200 words per minute. It is a rough guide for blog posts and scripts, not an exact figure — dense or technical text reads slower.',
+      },
+      {
+        q: 'Is there a character limit or paywall?',
+        a: 'No limit and no paywall. Paste as much as you like; it all runs in your browser, so nothing is uploaded.',
+      },
+      {
+        q: 'Why do writers care about character limits?',
+        a: 'Many platforms enforce them: SEO title tags display around 60 characters, meta descriptions around 155, a tweet is 280, and Instagram captions and ad headlines have their own caps. Counting as you write keeps you inside the limit.',
+      },
+    ],
+    relatedSlugs: ['case-converter', 'text-summarizer', 'compare-text'],
+    ctaHook: 'Run a writing, content, or SEO business? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Why word and character counts matter',
+    about:
+      'Counting words sounds trivial until you realize how many things quietly depend on it. Students write to assignment limits; journalists and copywriters write to space; and on the web, character counts govern whether your message survives at all. Search engines truncate page titles at roughly 600 pixels — about 60 characters — and meta descriptions around 155, so an SEO writer who ignores the count watches Google chop their carefully written snippet mid-sentence. Social platforms are stricter still: a tweet caps at 280 characters, an SMS segments every 160, and ad platforms reject headlines that run a character over. Beyond limits, counts are a planning tool — knowing that a 1,500-word article is roughly a seven-to-eight minute read helps you size content to an audience\'s attention. The subtlety most people miss is that "word count" is not perfectly universal: tools differ on whether a hyphenated term or a number is one word, and character counts diverge on whether spaces and line breaks are included, which is why this tool shows both. There is also a deeper wrinkle in the digital age — a "character" to a human is not always one character to a computer. An emoji or an accented letter can be one visible glyph but several underlying code units, which is why a tweet with emoji sometimes hits the limit sooner than you expect. For everyday writing, counting whitespace-separated words and visible characters as this tool does is exactly what you want; it mirrors how the platforms you are writing for will count you.',
+  },
+  {
+    slug: 'password-generator',
+    title: 'Password Generator — Strong Random Passwords',
+    h1: 'Pixie Password Generator',
+    shortName: 'Password Generator',
+    tagline: 'Generate strong, random passwords that stay in your browser.',
+    metaDescription:
+      'Generate strong random passwords with this free password generator. Choose length and character sets. Everything stays in your browser. No signup.',
+    keywords: [
+      'password generator',
+      'random password generator',
+      'strong password generator',
+      'secure password',
+      'create password',
+    ],
+    category: 'Generator',
+    emoji: '🔑',
+    image: '/tools/password-generator.jpg',
+    imageAlt: 'A padlock over a field of code',
+    primaryKeyword: 'password generator',
+    intro:
+      'Generate strong, random passwords with the length and character mix you want — uppercase, lowercase, numbers, and symbols, with an option to skip look-alike characters. A strength meter shows how solid each one is. Passwords are created with your browser\'s secure random generator and never leave your device.',
+    howItWorks: [
+      { title: 'Set the length', description: 'Drag the slider — 16 or more characters is recommended.' },
+      { title: 'Choose character sets', description: 'Toggle uppercase, lowercase, numbers, symbols, and "no look-alikes".' },
+      { title: 'Copy and save', description: 'Copy your password into a password manager, or regenerate for another.' },
+    ],
+    faqs: [
+      {
+        q: 'Are these passwords safe to use?',
+        a: 'Yes. They are generated locally using your browser\'s cryptographically secure random number generator (Web Crypto), and nothing is sent to any server. For best security, store them in a password manager rather than reusing them.',
+      },
+      {
+        q: 'What makes a password strong?',
+        a: 'Length and unpredictability. A long password drawn from a large mix of character types has more possible combinations — more "entropy" — which makes brute-force guessing impractical. 16+ characters with mixed sets is a strong baseline; longer is better.',
+      },
+      {
+        q: 'Should I use symbols and numbers?',
+        a: 'They help by enlarging the pool of possible characters, but length matters more. A long passphrase can be stronger than a short password full of symbols. Use both length and variety where a site allows it.',
+      },
+      {
+        q: 'What does "no look-alikes" do?',
+        a: 'It removes easily confused characters like capital I, lowercase l, the number 1, and O versus 0. Handy when a password might be read aloud or typed manually from a screen.',
+      },
+      {
+        q: 'Is anything stored or sent?',
+        a: 'No. Generation happens entirely in your browser — no logging, no transmission, no history. Close the tab and it is gone.',
+      },
+    ],
+    relatedSlugs: ['word-counter', 'case-converter', 'qr-code-generator'],
+    ctaHook: 'Building a product or site that needs real security? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'What actually makes a password strong',
+    about:
+      'Most advice about passwords is a decade out of date, and the gap matters because weak or reused passwords remain the single most common way accounts get breached. The security that counts is measured in entropy — the number of possible passwords an attacker would have to try — and entropy grows with both length and the size of the character pool you draw from. That is the crucial insight behind the famous xkcd comic "correct horse battery staple": a long, random passphrase of ordinary words can be both easier to remember and harder to crack than a short string like "Tr0ub4dor&3", because length beats complexity. The other half of the story is uniqueness. The real-world threat is rarely someone guessing your specific password; it is "credential stuffing", where attackers take billions of username-password pairs leaked from one breached site and replay them against every other site, betting that people reuse passwords — which they overwhelmingly do. That is why the modern consensus from bodies like NIST is: make passwords long, make every one unique, stop forcing arbitrary periodic changes, and let a password manager remember them so you never have to. A generator like this fits that workflow exactly — it produces a fresh, high-entropy password for each account using your browser\'s cryptographically secure randomness, and because it runs locally, the password is never transmitted or stored anywhere you did not put it. Generate, paste into your password manager, and enable two-factor authentication wherever it is offered; together those three habits eliminate the vast majority of account-takeover risk.',
+  },
+  {
+    slug: 'case-converter',
+    title: 'Case Converter — Change Text Case Online Free',
+    h1: 'Pixie Case Converter',
+    shortName: 'Case Converter',
+    tagline: 'Convert text to UPPERCASE, lowercase, Title Case, and more.',
+    metaDescription:
+      'Convert text case online free — UPPERCASE, lowercase, Title Case, Sentence case, and more. Paste, convert, and copy in one click. No signup.',
+    keywords: [
+      'case converter',
+      'uppercase to lowercase',
+      'title case converter',
+      'change text case',
+      'sentence case converter',
+    ],
+    category: 'Converter',
+    emoji: '🔠',
+    image: '/tools/case-converter.jpg',
+    imageAlt: 'Letter blocks showing upper and lower case',
+    primaryKeyword: 'case converter',
+    intro:
+      'Paste any text and instantly switch it between UPPERCASE, lowercase, Title Case, Sentence case, Capitalize Each Word, and aLtErNaTiNg case. Fixes caps-lock accidents, formats headings, and tidies copied text in one click. Then copy the result. Everything runs in your browser.',
+    howItWorks: [
+      { title: 'Paste your text', description: 'Drop in text that is in the wrong case — even an all-caps accident.' },
+      { title: 'Pick a case', description: 'UPPERCASE, lowercase, Title Case, Sentence case, capitalize, or alternating.' },
+      { title: 'Copy the result', description: 'Grab the converted text with one tap.' },
+    ],
+    faqs: [
+      {
+        q: 'What is the difference between Title Case and Sentence case?',
+        a: 'Title Case capitalizes the first letter of every word ("The Quick Brown Fox") — used for headlines. Sentence case only capitalizes the first letter of each sentence ("The quick brown fox.") — used for normal prose.',
+      },
+      {
+        q: 'Can it fix text I typed with caps lock on?',
+        a: 'Yes. Paste the all-caps text and choose Sentence case or lowercase to recover normal capitalization in one click, instead of retyping it.',
+      },
+      {
+        q: 'Does it change my words or just the case?',
+        a: 'Only the letter case changes. Your words, spacing, and punctuation stay exactly the same — it simply switches capital and lowercase letters.',
+      },
+      {
+        q: 'What is "alternating" case for?',
+        a: 'aLtErNaTiNg case is mostly used for a sarcastic or mocking tone online (the "mocking SpongeBob" meme). It is a fun style rather than a formatting standard.',
+      },
+      {
+        q: 'Is it free and private?',
+        a: 'Yes. No signup, and the conversion runs entirely in your browser — your text is never uploaded.',
+      },
+    ],
+    relatedSlugs: ['word-counter', 'fancy-text-generator', 'compare-text'],
+    ctaHook: 'Run a writing or content business? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Letter case, from typesetting to the web',
+    about:
+      'The words "uppercase" and "lowercase" are a literal relic of the printing press. In a hand-set type shop, a compositor kept metal letters in two wooden trays, or cases: the capital letters lived in the upper case, and the small letters in the lower case, simply because capitals were used less often and sat further away. Centuries later we still use the terms, even though the trays are long gone. Case carries real meaning beyond history, though. Title Case signals a heading and is governed by surprisingly fussy style rules — different style guides disagree on whether to capitalize short prepositions and conjunctions — while Sentence case has become the modern default for UI text and many publications because it reads as less shouty and more human. ALL CAPS is read by most people as shouting online, and it is also genuinely harder to read in long passages because the uniform rectangular shape of capital letters removes the word-shape cues our eyes use to read quickly. There are also technical cases this tool touches on the edges of: developers use camelCase, PascalCase, and snake_case for variable names, and converting between them is a routine chore. For everyday writing, the common need is simpler and this tool handles it instantly — rescue a paragraph from an accidental caps-lock, format a headline into Title Case, or normalize pasted text into clean Sentence case — all without retyping a word, and all in your browser so even sensitive text stays private.',
+  },
+  {
+    slug: 'age-calculator',
+    title: 'Age Calculator — Calculate Your Exact Age',
+    h1: 'Pixie Age Calculator',
+    shortName: 'Age Calculator',
+    tagline: 'Find your exact age in years, months, and days.',
+    metaDescription:
+      'Calculate your exact age in years, months, and days with this free age calculator. See total days and your next birthday countdown. No signup.',
+    keywords: [
+      'age calculator',
+      'calculate age',
+      'how old am i',
+      'age in days',
+      'date of birth calculator',
+    ],
+    category: 'Calculator',
+    emoji: '🎂',
+    image: '/tools/age-calculator.jpg',
+    imageAlt: 'A calendar with a date circled',
+    primaryKeyword: 'age calculator',
+    intro:
+      'Enter your date of birth and instantly see your exact age in years, months, and days — plus your total days lived and a countdown to your next birthday. Optionally set a target date to find your age on any past or future day. Everything is calculated in your browser.',
+    howItWorks: [
+      { title: 'Enter your birth date', description: 'Pick your date of birth from the calendar.' },
+      { title: 'Optional: set a target date', description: 'Leave it blank for today, or choose any date to find your age then.' },
+      { title: 'See the breakdown', description: 'Exact years/months/days, total days, and days to your next birthday.' },
+    ],
+    faqs: [
+      {
+        q: 'How is exact age calculated?',
+        a: 'It counts full years from your birth date to the target date, then the remaining whole months, then the remaining days — borrowing from the previous month\'s real length where needed. That is the standard "calendar age" people use.',
+      },
+      {
+        q: 'Can I calculate age on a future or past date?',
+        a: 'Yes. Set the "age at date" field to any date — a future birthday, a historical date, or an event — to see how old you (or anyone) will be or were then.',
+      },
+      {
+        q: 'Does it handle leap years correctly?',
+        a: 'Yes. Because it works with real calendar dates and actual month lengths, leap days and varying month lengths are handled automatically.',
+      },
+      {
+        q: 'What is the "total days" number?',
+        a: 'It is the exact number of days between the two dates — useful for milestones like your 10,000th day. The next-birthday countdown shows how many days until the anniversary of your birth date.',
+      },
+      {
+        q: 'Is my birth date stored?',
+        a: 'No. The calculation runs entirely in your browser; nothing is uploaded or saved.',
+      },
+    ],
+    relatedSlugs: ['half-birthday-calculator', 'bmi-calculator', 'word-counter'],
+    ctaHook: 'Run an events, health, or membership business? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'The surprising messiness of counting age',
+    about:
+      'Calculating age seems like simple subtraction until you look closely, and the wrinkles are a small tour of how human calendars work. The first issue is that months are not equal — borrowing a "month" when the day-of-month goes negative means borrowing 28, 29, 30, or 31 days depending on which month you came from, which is exactly why a correct age calculator works with real dates rather than dividing total days by 30. Leap years add another layer: roughly every four years February gains a day, and people born on February 29 — "leaplings" — technically only have a real birthday once every four years, though they celebrate on the 28th or March 1st in common years. Different cultures even count age differently; the traditional East Asian system considered a baby one year old at birth and added a year at the new year, so a person could be a year or two "older" by that reckoning than by the international standard, a difference South Korea only formally retired in 2023. Then there is the question of what you are measuring: your age in years is one thing, but your total days lived is another, and milestone-watchers like to celebrate round numbers — your 10,000th day falls around age 27, and your 1-billion-second mark lands near age 31. This calculator gives you all of it from a single date: the conventional years-months-days that you would say out loud, the exact day count for milestone hunting, and a countdown to your next birthday — computed against today or any date you choose, with leap years and month lengths handled correctly.',
+  },
+  {
+    slug: 'bmi-calculator',
+    title: 'BMI Calculator — Free Body Mass Index Calculator',
+    h1: 'Pixie BMI Calculator',
+    shortName: 'BMI Calculator',
+    tagline: 'Calculate your Body Mass Index in metric or imperial.',
+    metaDescription:
+      'Calculate your BMI free with this body mass index calculator. Enter height and weight in metric or imperial to see your BMI and category. No signup.',
+    keywords: [
+      'bmi calculator',
+      'body mass index calculator',
+      'calculate bmi',
+      'bmi chart',
+      'healthy weight calculator',
+    ],
+    category: 'Calculator',
+    emoji: '⚖️',
+    image: '/tools/bmi-calculator.jpg',
+    imageAlt: 'A measuring tape and scale',
+    primaryKeyword: 'bmi calculator',
+    intro:
+      'Enter your height and weight in metric or imperial units and instantly see your Body Mass Index (BMI) and which category it falls in. A quick, free screening number — calculated in your browser, with nothing uploaded.',
+    howItWorks: [
+      { title: 'Pick your units', description: 'Switch between metric (cm / kg) and imperial (ft·in / lb).' },
+      { title: 'Enter height and weight', description: 'Type your measurements into the fields.' },
+      { title: 'See your BMI', description: 'Get your BMI value and category, with the healthy range for reference.' },
+    ],
+    faqs: [
+      {
+        q: 'How is BMI calculated?',
+        a: 'BMI is your weight in kilograms divided by your height in metres squared (kg/m²). In imperial units it is 703 × pounds ÷ inches². This calculator does the conversion automatically for whichever units you choose.',
+      },
+      {
+        q: 'What are the BMI categories?',
+        a: 'For adults: under 18.5 is underweight, 18.5–24.9 is a healthy weight, 25–29.9 is overweight, and 30 or above is obese. These are the standard World Health Organization ranges.',
+      },
+      {
+        q: 'Is BMI accurate for everyone?',
+        a: 'No — it is a screening tool, not a diagnosis. BMI does not distinguish muscle from fat, so very muscular people can read as "overweight" while it can understate risk for others. It is also not designed for children, pregnant people, or the elderly without adjustment. Treat it as a rough flag, and see a doctor for a real assessment.',
+      },
+      {
+        q: 'What should I do with my BMI?',
+        a: 'Use it as one data point. If it falls outside the healthy range and you are concerned, talk to a healthcare professional who can consider your waist measurement, body composition, activity, and history — a far fuller picture than BMI alone.',
+      },
+      {
+        q: 'Is my data stored?',
+        a: 'No. Everything is calculated in your browser and nothing is uploaded.',
+      },
+    ],
+    relatedSlugs: ['age-calculator', 'word-counter', 'mortgage-calculator'],
+    ctaHook: 'Run a gym, clinic, or wellness brand? Pixie builds full booking websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'What BMI does — and does not — tell you',
+    about:
+      'Body Mass Index has an unusual history for something printed in every doctor\'s office: it was devised in the 1830s by a Belgian mathematician and astronomer, Adolphe Quetelet, who was studying the statistics of populations, not the health of individuals. He never intended his "Quetelet Index" to diagnose a single person, and that origin explains both its usefulness and its limits. As a population measure it is excellent — cheap, requiring only height and weight, and well correlated across large groups with rates of weight-related illness, which is why public-health bodies still rely on it. As an individual measure it is blunt. Because it only knows your height and total weight, it cannot tell muscle from fat or where fat sits on your body, so a muscular athlete can land in the "overweight" band while carrying very little fat, and two people with the same BMI can have very different health profiles. It also was not designed for growing children, pregnant people, or older adults whose muscle mass has declined, all of whom need adjusted interpretations. Modern clinicians increasingly pair BMI with other quick measures — waist circumference, waist-to-height ratio, and body-fat estimates — precisely because where you carry weight (especially around the abdomen) predicts metabolic risk better than total weight alone. None of this makes BMI useless; it makes it a starting point. This calculator gives you that starting number instantly in whichever units you prefer, with the standard categories for context — but the honest reading of a BMI outside the healthy range is "worth a conversation with a professional," not a verdict.',
+  },
+  {
+    slug: 'business-name-generator',
+    title: 'Business Name Generator — Brandable Name Ideas',
+    h1: 'Pixie Business Name Generator',
+    shortName: 'Business Name Generator',
+    tagline: 'Generate brandable business name ideas in seconds.',
+    metaDescription:
+      'Generate brandable business name ideas free. Enter a keyword and get startup, brand, and company name ideas instantly. No signup needed.',
+    keywords: [
+      'business name generator',
+      'company name generator',
+      'startup name generator',
+      'brand name generator',
+      'business name ideas',
+    ],
+    category: 'Generator',
+    emoji: '🏢',
+    image: '/tools/business-name-generator.jpg',
+    imageAlt: 'A storefront sign being designed',
+    primaryKeyword: 'business name generator',
+    intro:
+      'Stuck naming your business? Enter a keyword and generate brandable company name ideas — modern suffixes, prefixes, and invented words that sound like a real brand. Leave the keyword blank for abstract, brandable names. Generate as many batches as you like.',
+    howItWorks: [
+      { title: 'Enter a keyword', description: 'Type a word your business is about — or leave it blank for invented brand names.' },
+      { title: 'Generate ideas', description: 'Get a batch of brandable names built from proven naming patterns.' },
+      { title: 'Shortlist and check', description: 'Copy your favorites, then check domain and trademark availability.' },
+    ],
+    faqs: [
+      {
+        q: 'How does the business name generator work?',
+        a: 'It combines your keyword with proven branding patterns — adding modern suffixes (Hub, Labs, ly, ify), prefixes (Get, Go, Pro), and "The ___ Co." style constructions — to produce names that sound like real brands rather than random words.',
+      },
+      {
+        q: 'Should I check availability before using a name?',
+        a: 'Yes, always. Before committing, check that the matching domain is available, search your country\'s trademark database, and make sure the social handles are free. A great name you cannot legally use or get a domain for is not usable.',
+      },
+      {
+        q: 'What makes a good business name?',
+        a: 'Short, easy to say and spell, memorable, and not boxed into one product so you can grow. Avoid hard-to-spell substitutions and names that limit you to a single city or product line if you plan to expand.',
+      },
+      {
+        q: 'Can I use these names commercially?',
+        a: 'The generated ideas are free to use, but you are responsible for clearing them — a name being suggested here does not mean it is unregistered or free of trademark conflicts. Do the availability checks first.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes — free, no signup, runs in your browser. Generate unlimited batches.',
+      },
+    ],
+    relatedSlugs: ['slogan-generator', 'mission-statement-generator', 'trust-badge-generator'],
+    ctaHook: 'Got the name? Pixie turns it into a full brand and website — logo, domain, and pages — from one WhatsApp message.',
+    aboutHeading: 'What separates a name from a brand',
+    about:
+      'Naming a business is one of the highest-leverage, most-agonized-over decisions a founder makes, and a generator helps with the hardest part: getting unstuck. Staring at a blank page, your brain fixates on the literal and the taken; seeing dozens of constructed options breaks the block and trains your ear for what sounds right. The patterns this tool uses are the ones real brands lean on. Invented or modified words — think of how many startups end in "-ly", "-ify", or "-io" — are popular precisely because they are brandable and ownable: a made-up word has no prior meaning competing with yours and a far better shot at an available domain and trademark. Compound and descriptive names (a keyword plus "Hub", "Labs", "Works") trade a little distinctiveness for instant clarity about what you do. The classic advice still holds: a strong name is short, easy to say and spell on the first try, and not so literal that it traps you — "Amazon" outgrew being a bookstore in a way "Books.com" never could, and "Best Plumbers of Denver" cannot expand to a second city. The crucial step a generator cannot do for you is clearance. Before you fall in love with a name, confirm the domain is gettable, search the trademark register in your market, and check the social handles — because the cost of discovering a conflict after you have printed signage and built a site is painful. Use this tool to generate a long shortlist fast, say each candidate out loud, narrow to the few that feel like a brand, and only then do the legal and domain checks. That is exactly the path from a raw idea to a name worth building a business — and a website — around.',
+  },
+  {
+    slug: 'slogan-generator',
+    title: 'Slogan Generator — Free Tagline & Slogan Ideas',
+    h1: 'Pixie Slogan Generator',
+    shortName: 'Slogan Generator',
+    tagline: 'Generate catchy slogans and taglines for your brand.',
+    metaDescription:
+      'Generate catchy slogans and taglines free. Enter your brand and keyword to get memorable slogan ideas instantly. No signup needed.',
+    keywords: [
+      'slogan generator',
+      'tagline generator',
+      'slogan maker',
+      'catchy slogans',
+      'business slogan generator',
+    ],
+    category: 'Generator',
+    emoji: '📣',
+    image: '/tools/slogan-generator.jpg',
+    imageAlt: 'A bold marketing tagline on a poster',
+    primaryKeyword: 'slogan generator',
+    intro:
+      'Enter your brand name and what you do, and get a batch of catchy slogan and tagline ideas built from proven advertising structures. A fast way to break a blank page and find the angle worth refining for your website, ads, or packaging. Free and instant.',
+    howItWorks: [
+      { title: 'Enter brand + keyword', description: 'Type your brand name and the thing you do or sell.' },
+      { title: 'Generate slogans', description: 'Get a set of taglines in different proven styles.' },
+      { title: 'Pick and polish', description: 'Copy the strongest one and trim it to its punchiest form.' },
+    ],
+    faqs: [
+      {
+        q: 'What makes a slogan effective?',
+        a: 'The best slogans are short, easy to remember, and say something true about the benefit you offer — Nike\'s "Just Do It" or De Beers\' "A Diamond Is Forever". Memorability and a clear promise beat clever wordplay that means nothing.',
+      },
+      {
+        q: 'What is the difference between a slogan and a tagline?',
+        a: 'They overlap. A tagline is usually the permanent line that sits with your brand or logo; a slogan is often tied to a specific campaign. Both are short brand phrases, and this tool helps with either.',
+      },
+      {
+        q: 'Does it use AI?',
+        a: 'No — it builds slogans from proven advertising templates using your brand and keyword, so it is instant, free, and private. Treat the results as strong starting points to refine.',
+      },
+      {
+        q: 'Can I use these commercially?',
+        a: 'Yes, the ideas are free to use. As with any brand phrase, do a quick search to make sure your final choice is not already a well-known trademarked slogan in your industry.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes — free, no signup, nothing uploaded.',
+      },
+    ],
+    relatedSlugs: ['business-name-generator', 'mission-statement-generator', 'trust-badge-generator'],
+    ctaHook: 'Got your tagline? Pixie builds the full brand and website around it — text us on WhatsApp.',
+    aboutHeading: 'The craft of the one-line promise',
+    about:
+      'A slogan is the smallest, hardest-working piece of writing a brand owns — a handful of words meant to lodge in memory and stand for everything the company wants you to feel. The great ones look effortless and are anything but. "Just Do It" says nothing about shoes, yet it captures an attitude that made Nike feel like a coach in your corner; "A Diamond Is Forever", written by a young copywriter at the agency N.W. Ayer in 1947, single-handedly cemented the idea that an engagement ring should be a diamond and is routinely called the slogan of the century. What these share is not cleverness but compression: a true, emotional benefit squeezed into a rhythm you can repeat. The mechanics that help are well known to copywriters — brevity (most memorable slogans are three to five words), rhythm and sometimes rhyme, a focus on the customer\'s benefit rather than the company\'s features, and a tone that matches the brand\'s personality. A template-based generator like this is not trying to replace that craft; it is trying to defeat the blank page, which is where most slogans die. By dropping your brand and keyword into a range of proven structures, it surfaces angles you would not have reached by staring — a benefit framing, a "think X, think Y" hook, a confident declaration — and lets your ear pick the one with a spark. The real work then is subtraction: cut a word, sharpen the verb, read it aloud until it sounds inevitable. A slogan you would actually say out loud, that means something true about why you are different, is the seed a whole brand identity and website can grow from.',
+  },
+  {
+    slug: 'image-resizer',
+    title: 'Image Resizer — Resize & Compress Images Free',
+    h1: 'Pixie Image Resizer',
+    shortName: 'Image Resizer',
+    tagline: 'Resize and compress images in your browser, free.',
+    metaDescription:
+      'Resize and compress images free with this in-browser image resizer. Set dimensions, pick JPG/PNG/WebP, and download. No upload, fully private.',
+    keywords: [
+      'image resizer',
+      'resize image',
+      'image compressor',
+      'compress image',
+      'resize photo online',
+    ],
+    category: 'Converter',
+    emoji: '🖼️',
+    image: '/tools/image-resizer.jpg',
+    imageAlt: 'An image being scaled with dimension handles',
+    primaryKeyword: 'image resizer',
+    intro:
+      'Resize and compress any image right in your browser — set a new width (with locked aspect ratio), choose JPG, PNG, or WebP, and tune the quality to shrink the file size. See the before/after dimensions and bytes, then download. Your image is never uploaded.',
+    howItWorks: [
+      { title: 'Upload an image', description: 'Drop in a JPG, PNG, or WebP from your device.' },
+      { title: 'Resize and compress', description: 'Set the width, choose a format, and adjust quality to hit your target size.' },
+      { title: 'Download', description: 'Save the resized image — compare the new dimensions and file size first.' },
+    ],
+    faqs: [
+      {
+        q: 'Is my image uploaded to a server?',
+        a: 'No. The image is loaded, resized, and compressed entirely in your browser using a canvas, so it never leaves your device. That makes it safe for private photos and screenshots.',
+      },
+      {
+        q: 'What is the difference between resizing and compressing?',
+        a: 'Resizing changes the pixel dimensions (e.g. 4000px wide down to 1200px). Compressing reduces file size by lowering quality, usually for JPG or WebP. Doing both — smaller dimensions plus quality tuning — gives the biggest file-size savings.',
+      },
+      {
+        q: 'Which format should I choose?',
+        a: 'JPG is best for photographs and gives small files. PNG preserves sharp edges and transparency (logos, screenshots) but is larger. WebP usually beats both on size at the same quality and is supported by all modern browsers.',
+      },
+      {
+        q: 'Will resizing reduce quality?',
+        a: 'Making an image smaller generally keeps it sharp. Enlarging beyond the original dimensions will look soft, since the detail isn\'t there to begin with. Lowering JPG/WebP quality trades visible fidelity for a smaller file.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes — free, no signup, no watermark. Resize as many images as you like.',
+      },
+    ],
+    relatedSlugs: ['image-to-text', 'color-picker', 'qr-code-generator'],
+    ctaHook: 'Need a fast, image-optimized website? Pixie builds full sites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Why image size is the web\'s quiet performance killer',
+    about:
+      'Images are, by weight, the heaviest thing on most web pages, and oversized images are the single most common reason sites load slowly — which matters because page speed affects both how long visitors stay and how well a page ranks. The mistake is everywhere: a photo straight off a modern phone can be 4,000+ pixels wide and several megabytes, but the slot it fills on a web page might be 800 pixels, so the browser downloads many times more data than it can ever display, then shrinks it. Resizing the image to the dimensions it will actually appear at, before uploading, can cut the file size by 80–90% with no visible difference. Compression does the rest: formats like JPG and WebP throw away detail the eye barely notices to shrink files further, and choosing the right format matters — JPG and WebP for photographs, PNG for graphics with sharp edges or transparency, with WebP increasingly the best all-rounder because it delivers comparable quality at a smaller size. The reason a browser-based tool like this is appealing is privacy and speed: because the resizing happens on a canvas in your own browser, your photo is never uploaded to anyone\'s server, there is no queue or size cap, and it works offline. The practical workflow is simple — drop in the original, set the width to what your page, marketplace listing, or email actually needs, switch to WebP or JPG, and nudge the quality down while watching the file-size readout until you hit a good balance. Do that to every image on a site and you often halve total page weight, which is one of the cheapest performance wins there is.',
+  },
+  {
+    slug: 'color-picker',
+    title: 'Color Picker — HEX, RGB & HSL Color Tool',
+    h1: 'Pixie Color Picker',
+    shortName: 'Color Picker',
+    tagline: 'Pick a color and get HEX, RGB, and HSL values.',
+    metaDescription:
+      'Pick any color and get HEX, RGB, and HSL values with this free color picker. Copy codes and generate shades and tints. No signup needed.',
+    keywords: [
+      'color picker',
+      'hex color picker',
+      'hex to rgb',
+      'rgb to hex',
+      'html color codes',
+    ],
+    category: 'Converter',
+    emoji: '🎨',
+    image: '/tools/color-picker.jpg',
+    imageAlt: 'A color wheel and swatches',
+    primaryKeyword: 'color picker',
+    intro:
+      'Pick any color and instantly get its HEX, RGB, and HSL codes, ready to copy into your CSS, design tool, or brand palette. Tap the generated shades and tints to explore lighter and darker variants. Everything runs in your browser.',
+    howItWorks: [
+      { title: 'Pick a color', description: 'Use the color picker or type a HEX value directly.' },
+      { title: 'Copy the code', description: 'Grab the HEX, RGB, or HSL value with one tap.' },
+      { title: 'Explore shades', description: 'Tap a generated shade or tint to make it the active color.' },
+    ],
+    faqs: [
+      {
+        q: 'What is the difference between HEX, RGB, and HSL?',
+        a: 'They describe the same color three ways. HEX (#22C55E) is a compact code used in CSS and design tools. RGB (red, green, blue) gives the light mix as 0–255 values. HSL (hue, saturation, lightness) is the most intuitive for tweaking — change lightness to get shades and tints of the same hue.',
+      },
+      {
+        q: 'How do I convert HEX to RGB?',
+        a: 'Paste or pick a HEX value and this tool shows the matching RGB (and HSL) instantly — no math needed. It works in reverse too: any color you pick gives all three formats at once.',
+      },
+      {
+        q: 'What are shades and tints?',
+        a: 'A shade is the color mixed darker; a tint is mixed lighter. They share the same hue, which is why they work together in a palette. Tap any swatch to adopt it and read its codes.',
+      },
+      {
+        q: 'Where do I use these codes?',
+        a: 'HEX and RGB go straight into CSS and HTML; all three work in design tools like Figma, Canva, and Photoshop. Use them to keep brand colors consistent across your website, graphics, and documents.',
+      },
+      {
+        q: 'Is it free?',
+        a: 'Yes — free, no signup, runs entirely in your browser.',
+      },
+    ],
+    relatedSlugs: ['image-resizer', 'qr-code-generator', 'cool-text-generator'],
+    ctaHook: 'Building a brand palette? Pixie turns it into a full website and identity — text us on WhatsApp.',
+    aboutHeading: 'How computers describe color',
+    about:
+      'Every color on a screen is made by mixing three lights — red, green, and blue — and the different "color codes" you run into are just different ways of writing down that mix. RGB is the most literal: three numbers from 0 to 255 saying how much of each light to use, so pure red is rgb(255, 0, 0). HEX is the same information in a shorter, hexadecimal form — #FF0000 is that same red — which is why it became the standard in CSS and design tools where compactness matters. HSL takes a different, more human angle: instead of light amounts, it describes a color by its hue (its position on the color wheel, 0–360°), its saturation (how vivid versus grey), and its lightness (how close to white or black). That last model is the designer\'s friend, because to make a set of shades and tints that belong together you simply hold the hue and saturation steady and slide the lightness up and down — which is exactly what the swatch strip in this tool does. Understanding that these are interchangeable views of one color is what lets you move fluidly between a brand guideline that lists HEX codes, a CSS file, and a design app that prefers HSL. A good palette is built on this: a primary hue, a few tints and shades for backgrounds and hover states, and enough lightness contrast between text and background to stay readable — an accessibility requirement, not just an aesthetic one, since low-contrast text fails real users and automated audits alike. This picker gives you all three codes for any color at once and the shade ramp to build from, so whether you are writing CSS, filling a Figma swatch, or documenting a brand, you can copy the exact value you need.',
+  },
+  {
+    slug: 'percentage-calculator',
+    title: 'Percentage Calculator — Free & Instant',
+    h1: 'Pixie Percentage Calculator',
+    shortName: 'Percentage Calculator',
+    tagline: 'Work out any percentage in one tap.',
+    metaDescription:
+      'Free percentage calculator: find what is X% of Y, what percent one number is of another, and percent increase or decrease. Instant, no signup.',
+    keywords: ['percentage calculator', 'percent calculator', 'percentage change', 'what is x percent of y', 'percent increase calculator'],
+    category: 'Calculator',
+    emoji: '％',
+    image: '/tools/percentage-calculator.jpg',
+    imageAlt: 'A percent sign with a calculator',
+    primaryKeyword: 'percentage calculator',
+    intro:
+      'Answer the three everyday percentage questions in one tap: what is X% of Y, X is what percent of Y, and the percent increase or decrease between two numbers. Type your numbers and the answer updates instantly — no formulas to remember.',
+    howItWorks: [
+      { title: 'Pick the question', description: 'Choose "% of", "is what %", or "% change".' },
+      { title: 'Enter two numbers', description: 'Type the values and the result calculates live.' },
+      { title: 'Read the answer', description: 'Get the exact percentage or value, ready to use.' },
+    ],
+    faqs: [
+      { q: 'How do I find what X% of Y is?', a: 'Multiply Y by X and divide by 100. For example, 20% of 150 is (150 × 20) ÷ 100 = 30. The "% of" mode does this for you.' },
+      { q: 'How do I find what percent one number is of another?', a: 'Divide the part by the whole and multiply by 100. 30 out of 150 is (30 ÷ 150) × 100 = 20%. Use the "is what %" mode.' },
+      { q: 'How is percent increase or decrease calculated?', a: 'Subtract the old value from the new, divide by the old value, and multiply by 100. Going from 100 to 130 is a 30% increase; 100 to 80 is a 20% decrease.' },
+      { q: 'Can it handle decimals and negatives?', a: 'Yes — enter any real numbers, including decimals and negatives. Results are rounded to six decimal places for readability.' },
+      { q: 'Is it free?', a: 'Completely free, no signup, and it runs entirely in your browser.' },
+    ],
+    relatedSlugs: ['tip-calculator', 'date-duration-calculator', 'word-counter'],
+    ctaHook: 'Run a business that lives on numbers? Pixie builds full websites with calculators built in — text us on WhatsApp.',
+    aboutHeading: 'Percentages, demystified',
+    about:
+      'Percentages are one of the most useful pieces of everyday math and one of the most commonly fumbled, because the word "percent" hides three different questions that look similar but are solved differently. The first is finding a part of a whole — what is 15% of a $80 bill — which you solve by multiplying. The second is expressing one number as a proportion of another — you scored 42 out of 50, what percent is that — which you solve by dividing the part by the whole. The third, and the one people get wrong most often, is percent change: the difference between two values relative to the starting value, which is why a stock that drops 50% then rises 50% does not return to where it started (a $100 stock falling 50% to $50, then rising 50%, only reaches $75). The word itself comes from the Latin per centum, "by the hundred", and the % symbol evolved from an abbreviation of that phrase. The practical trap to remember is the base: a percent only means something relative to what it is a percent of, which is why "50% off" on a price you have already marked up is not the same as 50% off the original. This calculator separates the three questions so you pick the one you actually mean — find a percentage of a number, turn a ratio into a percent, or measure growth and decline — and gives you the exact answer without you having to remember which operation goes where.',
+  },
+  {
+    slug: 'tip-calculator',
+    title: 'Tip Calculator — Split the Bill Free',
+    h1: 'Pixie Tip Calculator',
+    shortName: 'Tip Calculator',
+    tagline: 'Calculate the tip and split the bill in seconds.',
+    metaDescription:
+      'Free tip calculator: enter the bill, pick a tip percentage, and split it between any number of people. Instant per-person totals. No signup.',
+    keywords: ['tip calculator', 'gratuity calculator', 'split the bill', 'how much to tip', 'bill splitter'],
+    category: 'Calculator',
+    emoji: '🧾',
+    image: '/tools/tip-calculator.jpg',
+    imageAlt: 'A restaurant bill with cash and a calculator',
+    primaryKeyword: 'tip calculator',
+    intro:
+      'Enter the bill, choose a tip percentage with the presets or slider, and split it across the table. See the tip amount, the total, and exactly what each person owes — instantly. No mental math at the end of dinner.',
+    howItWorks: [
+      { title: 'Enter the bill', description: 'Type the pre-tip total from your check.' },
+      { title: 'Pick a tip %', description: 'Tap a preset (15/18/20%) or fine-tune with the slider.' },
+      { title: 'Split it', description: 'Set how many people are paying and see the per-person total.' },
+    ],
+    faqs: [
+      { q: 'How much should I tip?', a: 'In the US, 15–20% of the pre-tax bill is customary for sit-down restaurant service, with 20% common for good service. Tipping norms vary by country and by service type — this tool lets you set any percentage.' },
+      { q: 'Should I tip on the pre-tax or post-tax amount?', a: 'Conventionally you tip on the pre-tax subtotal, though many people simply tip on the total for simplicity. Enter whichever figure you prefer as the bill amount.' },
+      { q: 'How does the split work?', a: 'The calculator adds the tip to the bill, then divides the total evenly by the number of people, so each person\'s share already includes their portion of the tip.' },
+      { q: 'Can I use it for any currency?', a: 'Yes — it does the math on the numbers you enter, so it works for any currency. Just read the result in your own currency.' },
+      { q: 'Is it free?', a: 'Yes, free and no signup. It runs entirely in your browser.' },
+    ],
+    relatedSlugs: ['percentage-calculator', 'date-duration-calculator', 'random-number-generator'],
+    ctaHook: 'Run a restaurant or café? Pixie builds full sites with menus, ordering, and checkout — text us on WhatsApp.',
+    aboutHeading: 'The (surprisingly cultural) math of tipping',
+    about:
+      'Tipping is half arithmetic and half etiquette, and the arithmetic is the easy half. Mathematically, a tip is just a percentage of the bill added on top, and splitting is dividing the total by the number of diners — the part this calculator handles so nobody at the table has to do mental math over a cooling plate of food. The etiquette half is where it gets genuinely confusing, because tipping norms are deeply cultural and inconsistent. In the United States, tipping 15–20% at sit-down restaurants is effectively mandatory because servers are often paid a sub-minimum "tipped wage" and rely on gratuities for most of their income. In much of Europe and Asia, service is frequently included or tipping is modest or even discouraged, and in a few countries it can be mildly insulting. "Tip creep" has muddied things further: point-of-sale tablets now prompt for tips at counter-service and takeaway spots where tipping was never traditional, defaulting to options like 18/20/25% that anchor people higher. The practical guidance is simple — tip according to local custom and the service you received, calculate it on the pre-tax subtotal if you want to be precise, and split the full total evenly so everyone covers their fair share. This tool keeps the math instant and accurate; the percentage you choose is, rightly, up to you.',
+  },
+  {
+    slug: 'date-duration-calculator',
+    title: 'Date Duration Calculator — Days Between Dates',
+    h1: 'Pixie Date Duration Calculator',
+    shortName: 'Date Duration Calculator',
+    tagline: 'Count the days, weeks, and months between two dates.',
+    metaDescription:
+      'Free date duration calculator: find how many days, weeks, months, and years are between two dates. Instant, no signup, fully private.',
+    keywords: ['date duration calculator', 'days between dates', 'date difference calculator', 'how many days between', 'time between dates'],
+    category: 'Calculator',
+    emoji: '📅',
+    image: '/tools/date-duration-calculator.jpg',
+    imageAlt: 'A calendar with two dates highlighted',
+    primaryKeyword: 'days between dates',
+    intro:
+      'Pick a start and end date and instantly see the gap between them — in years, months, and days, plus the total day count and the number of weeks. Perfect for deadlines, anniversaries, leases, due dates, and project timelines. Calculated in your browser.',
+    howItWorks: [
+      { title: 'Pick two dates', description: 'Choose a start date and an end date.' },
+      { title: 'See the duration', description: 'Get years/months/days, total days, and weeks at a glance.' },
+      { title: 'Use it anywhere', description: 'Plan deadlines, count down to events, or measure how long ago something was.' },
+    ],
+    faqs: [
+      { q: 'Does the order of the dates matter?', a: 'No. The calculator always shows the gap between the two dates, so you get the same positive duration whether you put the earlier or later date first.' },
+      { q: 'Is the end date included in the count?', a: 'It measures the span between the two dates, so the total days is the number of full days from the start to the end date. For "inclusive" counts (counting both endpoints), add one.' },
+      { q: 'Does it handle leap years and different month lengths?', a: 'Yes. Because it works with real calendar dates, leap days and the varying lengths of months are handled automatically in both the day count and the years/months/days breakdown.' },
+      { q: 'What can I use it for?', a: 'Counting days until a deadline or event, how long ago something happened, lease and contract lengths, pregnancy and project timelines, and age between any two dates.' },
+      { q: 'Is my data stored?', a: 'No — everything is calculated locally in your browser. Nothing is uploaded.' },
+    ],
+    relatedSlugs: ['age-calculator', 'percentage-calculator', 'tip-calculator'],
+    ctaHook: 'Run a business with deadlines and bookings? Pixie builds full websites with the tools baked in — text us on WhatsApp.',
+    aboutHeading: 'Why counting days is trickier than it looks',
+    about:
+      'Working out the time between two dates is a classic example of something that feels trivial but hides real complexity, which is why people reach for a tool instead of counting on their fingers. The naive approach — subtract the day numbers, the months, and the years separately — breaks immediately, because months have different lengths and years occasionally have an extra day. Going from January 31 to March 1 is not "one month and minus thirty days"; a correct calculator borrows the actual length of the intervening month. Leap years compound this: roughly every four years February has 29 days, governed by a rule most people half-remember (divisible by 4, except centuries, unless divisible by 400 — which is why 2000 was a leap year but 1900 was not). There is also a meaningful distinction between two ways of counting that trips people up constantly: the duration between dates versus an inclusive count of days. The number of nights you book a hotel from the 10th to the 13th is three, but the number of days you are "there" touching both endpoints is four — same dates, different question. This calculator reports the clean span between the two dates and also gives you the total in weeks, so you can plan around either interpretation. Under the hood it relies on the calendar arithmetic built into every browser, which correctly accounts for leap years and month lengths, so whether you are counting down to a launch, measuring a lease, or working out how long ago something happened, the numbers are exact.',
+  },
+  {
+    slug: 'json-formatter',
+    title: 'JSON Formatter — Beautify, Minify & Validate',
+    h1: 'Pixie JSON Formatter',
+    shortName: 'JSON Formatter',
+    tagline: 'Beautify, minify, and validate JSON instantly.',
+    metaDescription:
+      'Free JSON formatter and validator: beautify, minify, and check JSON for errors right in your browser. Nothing uploaded. No signup.',
+    keywords: ['json formatter', 'json beautifier', 'json validator', 'format json', 'json minify'],
+    category: 'Converter',
+    emoji: '{ }',
+    image: '/tools/json-formatter.jpg',
+    imageAlt: 'Formatted JSON code on a screen',
+    primaryKeyword: 'json formatter',
+    intro:
+      'Paste messy or minified JSON and instantly beautify it with clean indentation, minify it to the smallest size, or validate it — with a clear error message pointing at the first problem. Everything runs in your browser, so even sensitive payloads never leave your device.',
+    howItWorks: [
+      { title: 'Paste JSON', description: 'Drop in any JSON — minified, messy, or hand-written.' },
+      { title: 'Beautify or minify', description: 'Beautify indents it for reading; minify strips whitespace for the smallest payload.' },
+      { title: 'Copy the result', description: 'Valid JSON is reformatted and ready to copy; invalid JSON shows the error.' },
+    ],
+    faqs: [
+      { q: 'What does "beautify" do?', a: 'It re-indents your JSON with consistent 2-space spacing and line breaks so nested objects and arrays are easy to read and debug, without changing any of the data.' },
+      { q: 'What does "minify" do?', a: 'It removes all unnecessary whitespace, producing the smallest valid JSON string — useful for reducing payload size in API requests, configs, and storage.' },
+      { q: 'How does validation work?', a: 'The tool parses your input with the browser\'s JSON engine. If it is valid, you get a "Valid JSON" confirmation; if not, it shows the parser\'s error message describing what went wrong.' },
+      { q: 'Is my JSON uploaded anywhere?', a: 'No. Parsing and formatting happen entirely in your browser, so confidential data — API responses, tokens, configs — never touches a server.' },
+      { q: 'Is it free?', a: 'Yes, completely free with no signup or limits.' },
+    ],
+    relatedSlugs: ['case-converter', 'compare-text', 'color-picker'],
+    ctaHook: 'Building an app or API and need a site or dashboard around it? Pixie builds it fast — text us on WhatsApp.',
+    aboutHeading: 'Why JSON formatting matters',
+    about:
+      'JSON — JavaScript Object Notation — quietly became the language the internet uses to talk to itself. Almost every web API, config file, and stored document moves data as JSON because it is human-readable, language-independent, and maps cleanly onto the basic data types every programming language shares: strings, numbers, booleans, null, arrays, and key-value objects. Its creator, Douglas Crockford, famously said he did not invent JSON so much as discover it — it was always there in JavaScript\'s object syntax — and he deliberately kept the spec tiny, which is why it has barely changed in two decades. That minimalism is also why a formatter is so handy: JSON is strict in ways that bite. Every key must be double-quoted, you cannot leave a trailing comma after the last item, comments are not allowed, and a single missing brace or bracket invalidates the whole document — with an error that often points a few characters past where the real mistake is. Minified JSON sent over the wire is a single dense line that is impossible to read by eye, so beautifying it with proper indentation is usually the first step in debugging an API response; minifying, conversely, shaves bytes off payloads where size matters. Validating catches the strictness errors before they reach your code. Doing all of this in the browser, as this tool does, matters for a practical reason beyond convenience: API responses and config files frequently contain secrets — tokens, keys, personal data — and pasting them into a server-side formatter means handing that data to a third party. Here the parse never leaves your machine.',
+  },
+  {
+    slug: 'lorem-ipsum-generator',
+    title: 'Lorem Ipsum Generator — Free Placeholder Text',
+    h1: 'Pixie Lorem Ipsum Generator',
+    shortName: 'Lorem Ipsum Generator',
+    tagline: 'Generate placeholder text for mockups and designs.',
+    metaDescription:
+      'Free lorem ipsum generator: create placeholder text by paragraphs, sentences, or words. Copy dummy text for mockups and designs. No signup.',
+    keywords: ['lorem ipsum generator', 'lorem ipsum', 'placeholder text generator', 'dummy text', 'filler text generator'],
+    category: 'Generator',
+    emoji: '📝',
+    image: '/tools/lorem-ipsum-generator.jpg',
+    imageAlt: 'A design mockup filled with placeholder text',
+    primaryKeyword: 'lorem ipsum generator',
+    intro:
+      'Generate as much placeholder text as your layout needs — by paragraphs, sentences, or words — and copy it straight into your mockup, template, or wireframe. Optionally start with the classic "Lorem ipsum dolor sit amet" opening.',
+    howItWorks: [
+      { title: 'Choose the unit', description: 'Paragraphs, sentences, or words.' },
+      { title: 'Set the amount', description: 'Enter how many you need (up to 100).' },
+      { title: 'Copy it', description: 'Grab the generated filler text and paste it into your design.' },
+    ],
+    faqs: [
+      { q: 'What is lorem ipsum?', a: 'Lorem ipsum is scrambled, meaningless Latin-like text used as a placeholder in design and publishing. Because it has no real meaning, it lets you judge layout, typography, and spacing without being distracted by the content.' },
+      { q: 'Where does lorem ipsum come from?', a: 'It is derived from a passage of Cicero\'s "De Finibus Bonorum et Malorum" written in 45 BC, with words altered and jumbled. It has been the printing industry\'s standard dummy text since the 1500s.' },
+      { q: 'Why use placeholder text instead of real copy?', a: 'Real copy draws people into reading and reviewing content before the design is settled. Lorem ipsum keeps the focus on the visual layout, and its word-length distribution roughly mimics natural English so the blocks look realistic.' },
+      { q: 'Can I generate words or sentences instead of paragraphs?', a: 'Yes — switch the unit to sentences or words and set the exact count you need to fill a specific space, like a headline, button, or caption.' },
+      { q: 'Is it free?', a: 'Yes, free and no signup. It generates instantly in your browser.' },
+    ],
+    relatedSlugs: ['color-palette-generator', 'css-gradient-generator', 'word-counter'],
+    ctaHook: 'Designing a site and want it actually built? Pixie ships full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'The 2,000-year-old placeholder',
+    about:
+      'Lorem ipsum is one of the strangest survivals in design — a block of garbled Latin that has been used as placeholder text for roughly five centuries and shows no sign of retiring. Its purpose is precise: when you are designing a layout, real words are a distraction, because clients and colleagues start reading and reacting to the content ("change that headline") instead of evaluating the thing you actually want feedback on — the spacing, hierarchy, type, and balance. Meaningless text that still has the rhythm and word-length variation of real language lets the design speak for itself. The text itself traces back to a genuine work of Latin philosophy: Cicero\'s 45 BC treatise on ethics, "De Finibus Bonorum et Malorum" (On the Ends of Good and Evil), whose passage beginning "Neque porro quisquam est qui dolorem ipsum..." was chopped up and corrupted into the familiar "Lorem ipsum dolor sit amet" that no longer means anything. It entered the design world in the 1500s when an unknown typesetter scrambled the passage to make a type specimen, and it surged again in the 1980s when Letraset and then desktop-publishing software shipped it as the default dummy text. The deliberate non-meaning is the feature: it is unobtrusive enough that the eye treats it as texture, yet structured enough to fill a real layout convincingly. This generator gives you exactly the amount you need — a single caption\'s worth of words, a few sentences for a card, or pages of paragraphs for a long-form mockup — so the placeholder fits the space instead of forcing the space to fit the placeholder.',
+  },
+  {
+    slug: 'color-palette-generator',
+    title: 'Color Palette Generator — Build Color Schemes',
+    h1: 'Pixie Color Palette Generator',
+    shortName: 'Color Palette Generator',
+    tagline: 'Generate harmonious color schemes from any base color.',
+    metaDescription:
+      'Free color palette generator: pick a base color and get complementary, analogous, triadic, and monochromatic schemes. Copy HEX codes. No signup.',
+    keywords: ['color palette generator', 'color scheme generator', 'color combinations', 'complementary colors', 'palette maker'],
+    category: 'Generator',
+    emoji: '🎨',
+    image: '/tools/color-palette-generator.jpg',
+    imageAlt: 'A set of coordinated color swatches',
+    primaryKeyword: 'color palette generator',
+    intro:
+      'Pick a base color and instantly generate a harmonious palette — complementary, analogous, triadic, monochromatic, or a tints-and-shades ramp. Tap any swatch to make it the new base and explore, then copy the HEX codes for your brand, website, or design.',
+    howItWorks: [
+      { title: 'Choose a base color', description: 'Use the picker or type a HEX value.' },
+      { title: 'Pick a harmony rule', description: 'Complementary, analogous, triadic, monochromatic, or tints & shades.' },
+      { title: 'Copy the codes', description: 'Grab individual HEX values or copy the whole palette.' },
+    ],
+    faqs: [
+      { q: 'What is a color harmony?', a: 'A harmony is a rule for choosing colors that look good together based on their positions on the color wheel. Complementary colors sit opposite each other; analogous colors sit next to each other; triadic colors are evenly spaced; monochromatic uses one hue at different lightness levels.' },
+      { q: 'Which scheme should I use for a brand?', a: 'Analogous and monochromatic palettes are the safest and most cohesive for brands. Complementary and triadic schemes add contrast and energy but need careful balancing — usually one dominant color with the others as accents.' },
+      { q: 'How do I use these in CSS or design tools?', a: 'Copy the HEX codes and paste them into your CSS, Figma, Canva, or brand guide. The "copy all" button grabs the whole palette at once.' },
+      { q: 'Why does tapping a swatch change everything?', a: 'Tapping a swatch makes it the new base color, so you can wander through the color space — generate a palette, pick the variant you like best, and build a fresh harmony from it.' },
+      { q: 'Is it free?', a: 'Yes — free, no signup, runs entirely in your browser.' },
+    ],
+    relatedSlugs: ['color-picker', 'css-gradient-generator', 'lorem-ipsum-generator'],
+    ctaHook: 'Got your palette? Pixie turns it into a full brand and website — logo, colors, pages — from one WhatsApp message.',
+    aboutHeading: 'The science behind colors that work together',
+    about:
+      'Color harmony is not just taste — it is geometry on the color wheel, an idea that goes back to Isaac Newton arranging the spectrum into a circle and later refined by artists and color theorists like Johannes Itten at the Bauhaus. The wheel arranges hues so that their relationships become spatial: colors directly opposite each other are complementary and create maximum contrast and vibrancy (which is why sports teams and warning signs love them, and why red text on green vibrates uncomfortably if overused); colors adjacent to each other are analogous and feel calm and cohesive because they share underlying wavelengths; three colors evenly spaced around the wheel are triadic and feel balanced but lively. The cleanest model for actually building these is HSL — hue, saturation, lightness — because a harmony is mostly an operation on hue (rotate around the wheel) while holding saturation and lightness steady, and a monochromatic palette is the reverse: fix the hue and vary the lightness, which is exactly how you derive the tints (lighter) and shades (darker) that a real design system needs for backgrounds, borders, and hover states. This generator does that math for you, but the design wisdom is worth keeping in mind: restraint wins. The strongest brand palettes usually rest on one dominant color, one or two supporting tones, and a neutral, with the bold complementary or triadic colors reserved as small accents. Generate a few options, pick the one with the right mood, and remember that contrast between text and background is an accessibility requirement, not just an aesthetic choice.',
+  },
+  {
+    slug: 'css-gradient-generator',
+    title: 'CSS Gradient Generator — Free Gradient Maker',
+    h1: 'Pixie CSS Gradient Generator',
+    shortName: 'CSS Gradient Generator',
+    tagline: 'Design CSS gradients and copy the code instantly.',
+    metaDescription:
+      'Free CSS gradient generator: pick colors, angle, and type, preview live, and copy the CSS. Linear and radial gradients. No signup.',
+    keywords: ['css gradient generator', 'gradient generator', 'linear gradient css', 'radial gradient', 'background gradient maker'],
+    category: 'Generator',
+    emoji: '🌈',
+    image: '/tools/css-gradient-generator.jpg',
+    imageAlt: 'A smooth color gradient on a screen',
+    primaryKeyword: 'css gradient generator',
+    intro:
+      'Design a CSS gradient visually — pick two colors, set the angle, switch between linear and radial — and copy the ready-to-paste CSS. Live preview as you adjust, so you see exactly what you ship. No code to write by hand.',
+    howItWorks: [
+      { title: 'Pick two colors', description: 'Choose your start and end colors.' },
+      { title: 'Set type and angle', description: 'Linear with any angle, or radial from the center.' },
+      { title: 'Copy the CSS', description: 'Grab the one-line background rule and paste it into your stylesheet.' },
+    ],
+    faqs: [
+      { q: 'How do I use the generated CSS?', a: 'Copy the line (e.g. background: linear-gradient(135deg, #7c3aed, #22c55e);) and paste it into the CSS rule for the element you want the gradient on. It works in every modern browser.' },
+      { q: 'What is the difference between linear and radial?', a: 'A linear gradient blends colors along a straight line at the angle you set. A radial gradient blends outward from a center point in a circle. Linear is the most common for backgrounds and buttons.' },
+      { q: 'What does the angle do?', a: 'For linear gradients, the angle sets the direction of the blend — 0° goes bottom-to-top, 90° left-to-right, 135° is a popular diagonal. Drag the slider and watch the preview.' },
+      { q: 'Can I make subtle, professional gradients?', a: 'Yes — pick two colors that are close in hue or lightness for a subtle blend. Big jumps between very different colors read as bold or playful; small steps read as refined.' },
+      { q: 'Is it free?', a: 'Yes — free, no signup, fully in your browser.' },
+    ],
+    relatedSlugs: ['color-palette-generator', 'color-picker', 'lorem-ipsum-generator'],
+    ctaHook: 'Want a polished site, not just a gradient? Pixie builds full websites in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'Gradients, from gimmick to good taste',
+    about:
+      'CSS gradients are pure math rendered as color: the browser computes a smooth interpolation between the colors you specify, across either a line (linear) or a set of expanding rings (radial), without you ever exporting an image. That last point is the quiet superpower — before gradients were a native CSS feature, designers had to slice a Photoshop gradient into a background image, which was heavier to load, blurry on high-resolution screens, and impossible to resize cleanly. A CSS gradient is resolution-independent, weighs nothing, and scales to any size, which is why it is the right tool for backgrounds, buttons, overlays, and hero sections. The syntax encodes a few choices: the type, the direction (an angle for linear, a shape and position for radial), and a list of color stops the browser blends between. Gradients have also been on an aesthetic journey — wildly overused in the skeuomorphic late 2000s, banished during the flat-design era, and now back in a more tasteful form, popularized by brands like Instagram and Stripe that use soft, multi-stop blends as signature backgrounds. The taste lesson embedded in that history is restraint: the gradients that look professional today are usually subtle, blending two colors that are near each other in hue or brightness, or a single hue moving through lightness, rather than a jarring rainbow. This generator lets you dial that in visually and copy the exact one-line rule, so you get the modern look without hand-writing angles and hex stops or shipping a heavy background image.',
+  },
+  {
+    slug: 'hashtag-generator',
+    title: 'Hashtag Generator — Free Hashtags for Posts',
+    h1: 'Pixie Hashtag Generator',
+    shortName: 'Hashtag Generator',
+    tagline: 'Generate relevant hashtags from a keyword.',
+    metaDescription:
+      'Free hashtag generator for Instagram, TikTok, and more. Enter a keyword and get relevant hashtags to copy and paste. No signup needed.',
+    keywords: ['hashtag generator', 'instagram hashtags', 'tiktok hashtags', 'hashtags for likes', 'hashtag finder'],
+    category: 'Generator',
+    emoji: '#️⃣',
+    image: '/tools/hashtag-generator.jpg',
+    imageAlt: 'A phone showing social media hashtags',
+    primaryKeyword: 'hashtag generator',
+    intro:
+      'Enter a topic or a couple of keywords and get a batch of relevant hashtags — niche variations of your keyword plus broadly popular tags — ready to copy into your Instagram, TikTok, or other social posts. Free and instant.',
+    howItWorks: [
+      { title: 'Enter your topic', description: 'Type one or more keywords (e.g. coffee, latte art).' },
+      { title: 'Generate hashtags', description: 'Get keyword variations plus popular general tags.' },
+      { title: 'Copy and post', description: 'Copy all with one tap and paste into your caption or first comment.' },
+    ],
+    faqs: [
+      { q: 'How many hashtags should I use?', a: 'Instagram allows up to 30 per post, but relevance beats volume. A focused set of 5–15 tags that genuinely match your content usually performs better than 30 generic ones. TikTok favors fewer, highly relevant tags.' },
+      { q: 'What makes a good hashtag mix?', a: 'Blend specific, niche tags (smaller but highly relevant audiences) with a few broader popular ones. Niche tags help the right people find you; huge tags are crowded and your post disappears quickly.' },
+      { q: 'Where do I put hashtags?', a: 'On Instagram you can put them in the caption or the first comment — both work for discovery. On TikTok and X they go in the caption. Keep them relevant to avoid being flagged as spammy.' },
+      { q: 'Are these guaranteed to go viral?', a: 'No tool can guarantee that — hashtags help discovery, but reach depends mostly on your content and timing. Treat these as relevant starting points and prune to the ones that truly fit.' },
+      { q: 'Is it free?', a: 'Yes — free, no signup, runs in your browser.' },
+    ],
+    relatedSlugs: ['random-emoji-generator', 'slogan-generator', 'business-name-generator'],
+    ctaHook: 'Run a social or content brand? Pixie builds full websites and link-in-bio pages in 60 seconds — text us on WhatsApp.',
+    aboutHeading: 'How hashtags actually help (and the myths)',
+    about:
+      'The hashtag started as a user invention, not a platform feature — in 2007 Chris Messina proposed using the pound sign on Twitter to group related messages, and the idea spread organically until platforms made tags clickable and searchable. Functionally, a hashtag is a label that adds your post to a feed of everything else carrying that tag, which is why they remain a discovery tool: people browsing or following a tag can find content from accounts they do not already follow. The persistent myth is that piling on the most popular hashtags maximizes reach. The opposite is usually true. Mega-tags like #love or #instagood attach your post to a firehose where it is buried within seconds, and platforms increasingly treat irrelevant tag-stuffing as a spam signal. The effective strategy is a mix weighted toward specificity: a few niche tags that describe exactly what your post is about reach a smaller but genuinely interested audience that is more likely to engage, and engagement is what the algorithm actually rewards. A handful of medium-sized tags and one or two big ones round it out. Relevance is the throughline — a tag should describe the content, not just chase traffic. This generator builds that kind of set by taking your keyword and producing on-topic variations (combining it with common community suffixes and prefixes) alongside a small set of broadly popular tags, so you start from something relevant rather than a generic dump. The judgment is still yours: trim the list to the tags that truly fit the specific post, and remember that hashtags assist discovery but never substitute for content worth discovering.',
+  },
+  {
+    slug: 'random-number-generator',
+    title: 'Random Number Generator — Free & Secure',
+    h1: 'Pixie Random Number Generator',
+    shortName: 'Random Number Generator',
+    tagline: 'Generate random numbers in any range.',
+    metaDescription:
+      'Free random number generator: pick a range, how many numbers, and whether to allow repeats. Secure in-browser randomness. No signup.',
+    keywords: ['random number generator', 'number picker', 'random number', 'rng', 'pick a random number'],
+    category: 'Generator',
+    emoji: '🎲',
+    image: '/tools/random-number-generator.jpg',
+    imageAlt: 'Numbered balls in a lottery drum',
+    primaryKeyword: 'random number generator',
+    intro:
+      'Generate random numbers in any range you choose — pick one, or a whole set, with an option for no repeats. Powered by your browser\'s secure random generator, so the results are genuinely unpredictable. Great for draws, raffles, games, and decisions.',
+    howItWorks: [
+      { title: 'Set the range', description: 'Enter the minimum and maximum values.' },
+      { title: 'Choose how many', description: 'Pick a single number or a set, with optional "no repeats".' },
+      { title: 'Generate', description: 'Tap to draw, and copy the result if you need it.' },
+    ],
+    faqs: [
+      { q: 'How random are the numbers?', a: 'They use the Web Crypto API — your browser\'s cryptographically secure random number generator — which is far more unpredictable than ordinary pseudo-random functions. That makes it suitable for fair draws and raffles.' },
+      { q: 'What does "no repeats" do?', a: 'With it on, every number in your result is unique (no value appears twice) — exactly what you want for raffles, seating, or shuffling. You can only request as many unique numbers as the range allows.' },
+      { q: 'Can I generate many numbers at once?', a: 'Yes — set "how many" up to 1000. Useful for bulk sampling, test data, or drawing multiple winners in one go.' },
+      { q: 'Can it include negative numbers?', a: 'Yes — set the minimum to a negative value. The range can span any integers as long as the maximum is greater than or equal to the minimum.' },
+      { q: 'Is it free?', a: 'Yes, free and no signup. Everything runs in your browser.' },
+    ],
+    relatedSlugs: ['spin-the-wheel', 'password-generator', 'percentage-calculator'],
+    ctaHook: 'Running a giveaway or contest? Pixie builds full campaign sites and landing pages — text us on WhatsApp.',
+    aboutHeading: 'What "random" really means on a computer',
+    about:
+      'True randomness is surprisingly hard for a computer, because a computer is a deterministic machine — give it the same inputs and it produces the same outputs, which is the opposite of random. For decades, software used pseudo-random number generators (PRNGs): clever formulas that, starting from a "seed", produce a long sequence of numbers that look random and pass statistical tests but are entirely predictable if you know the seed and the algorithm. That is fine for a game or a shuffle, but dangerous for anything where predictability could be exploited — which is why a separate class exists. Cryptographically secure generators, like the Web Crypto API this tool uses, gather entropy from genuinely unpredictable physical sources the operating system collects (timing jitter, hardware events, dedicated random-number circuitry in modern chips) and use it so that even an attacker who sees previous outputs cannot predict the next one. For a random-number tool that might be used to draw a raffle winner or pick a contest entrant, that distinction matters for fairness: using secure randomness means no one can game the draw by reverse-engineering a weak generator. The other subtle design choice is avoiding bias. A naive "random mod range" can subtly favor some numbers over others when the range does not divide evenly; careful implementations account for that so every value in your range is equally likely. The practical upshot is that you can trust the numbers here for fair, repeatable-on-demand draws, unique selections without duplicates, or just settling a decision — all generated locally, instantly, and without anything leaving your browser.',
+  },
+  {
+    slug: 'spin-the-wheel',
+    title: 'Spin the Wheel — Free Random Picker Wheel',
+    h1: 'Pixie Spin the Wheel',
+    shortName: 'Spin the Wheel',
+    tagline: 'Enter options, spin, and let the wheel decide.',
+    metaDescription:
+      'Free spin the wheel picker: enter your options, spin, and get a random winner. Great for decisions, raffles, and classroom games. No signup.',
+    keywords: ['spin the wheel', 'random picker wheel', 'wheel of names', 'decision wheel', 'random name picker'],
+    category: 'Generator',
+    emoji: '🎡',
+    image: '/tools/spin-the-wheel.jpg',
+    imageAlt: 'A colorful spinning prize wheel',
+    primaryKeyword: 'spin the wheel',
+    intro:
+      'Type your options, hit spin, and let the wheel pick for you. Perfect for deciding what to eat, who goes first, drawing a raffle winner, or running a classroom game. The wheel spins with a fair, random result every time — all in your browser.',
+    howItWorks: [
+      { title: 'Add your options', description: 'Enter choices one per line — names, prizes, tasks, anything.' },
+      { title: 'Spin the wheel', description: 'Tap spin and watch it slow to a random pick.' },
+      { title: 'Get the winner', description: 'The option under the pointer is your result.' },
+    ],
+    faqs: [
+      { q: 'Is the wheel actually fair?', a: 'Yes — the landing position is chosen with random rotation, and every option occupies an equal slice of the wheel, so each has the same chance of winning regardless of where it appears in your list.' },
+      { q: 'How many options can I add?', a: 'As many as you like, one per line. Labels are trimmed on the wheel face for readability, but the full option is used for the result. Two or more options are needed to spin.' },
+      { q: 'What can I use it for?', a: 'Deciding what to eat, picking who goes first in a game, drawing raffle or giveaway winners, choosing a random student or team, chores, and breaking ties of any kind.' },
+      { q: 'Does it save my options?', a: 'No — everything runs in your browser for the current session. Nothing is uploaded or stored on a server.' },
+      { q: 'Is it free?', a: 'Yes — free, no signup, no ads on the result. Spin as many times as you want.' },
+    ],
+    relatedSlugs: ['random-number-generator', 'random-food-generator', 'random-emoji-generator'],
+    ctaHook: 'Running a giveaway or event? Pixie builds full campaign sites with entry forms — text us on WhatsApp.',
+    aboutHeading: 'Why we let a wheel decide',
+    about:
+      'There is something deeply satisfying about handing a decision to a spinning wheel, and it is not just entertainment — randomized choice is a genuinely useful tool with a long history. Drawing lots to make a fair, impartial decision appears across cultures and millennia, from ancient elections to dividing inheritances, precisely because randomness removes bias, favoritism, and endless deliberation. A picker wheel is the modern, friendly version of that: when any option is acceptable and you just need to commit, outsourcing the choice to chance is faster and feels fairer than arguing. It also sidesteps decision fatigue — the well-documented drain that comes from making too many choices — by converting an open question into a single satisfying moment. The visual spin matters more than you would think; watching the wheel decelerate builds a little suspense and makes the outcome feel earned and impartial, which is why teachers use name-picker wheels to call on students (no accusations of favoritism), streamers use them to pick giveaway winners on camera, and families use them to settle what to watch or eat. The fairness depends on two things this tool gets right: every option must occupy an equal slice, and the stopping point must be genuinely random rather than subtly weighted, so no entry is more likely to win based on its position. Beyond the fun, randomization has serious cousins — scientific studies randomize participants to remove bias, and lotteries and audits use it for provable fairness. For everyday ties, though, the wheel\'s real gift is permission to stop deliberating: add the options you can live with, spin, and accept the result.',
+  },
+];
+
+export function getTool(slug: string): ToolDefinition | undefined {
+  return TOOLS.find((t) => t.slug === slug);
+}
+
+export function getRelatedTools(slug: string): ToolDefinition[] {
+  const tool = getTool(slug);
+  if (!tool) return [];
+  return tool.relatedSlugs
+    .map(getTool)
+    .filter((t): t is ToolDefinition => Boolean(t));
+}

@@ -1,0 +1,1218 @@
+const { supabase } = require('../config/database');
+
+/**
+ * Get overview metrics for the dashboard.
+ */
+async function getOverviewMetrics() {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Run all queries in parallel
+  const [
+    usersResult,
+    activeTodayResult,
+    activeWeekResult,
+    sitesResult,
+    auditsResult,
+    meetingsResult,
+    messagesWeekResult,
+  ] = await Promise.all([
+    supabase.from('users').select('id, state, metadata, created_at'),
+    supabase.from('conversations').select('user_id').gte('created_at', todayStart),
+    supabase.from('conversations').select('user_id').gte('created_at', weekAgo),
+    supabase.from('generated_sites').select('id, status'),
+    supabase.from('website_audits').select('id, status'),
+    supabase.from('meetings').select('id, status'),
+    supabase.from('conversations').select('id').gte('created_at', weekAgo),
+  ]);
+
+  const users = usersResult.data || [];
+  const activeToday = new Set((activeTodayResult.data || []).map((r) => r.user_id)).size;
+  const activeWeek = new Set((activeWeekResult.data || []).map((r) => r.user_id)).size;
+  const sites = sitesResult.data || [];
+  const audits = auditsResult.data || [];
+  const meetings = meetingsResult.data || [];
+  const messagesWeek = (messagesWeekResult.data || []).length;
+
+  const qualified = users.filter((u) => u.metadata?.leadBriefSent).length;
+  const closed = users.filter((u) => u.metadata?.leadClosed).length;
+  const hotLeads = users.filter((u) => u.metadata?.leadTemperature === 'HOT').length;
+  const warmLeads = users.filter((u) => u.metadata?.leadTemperature === 'WARM').length;
+  const coldLeads = users.filter((u) => u.metadata?.leadTemperature === 'COLD').length;
+
+  // State distribution
+  const stateDistribution = {};
+  users.forEach((u) => {
+    stateDistribution[u.state] = (stateDistribution[u.state] || 0) + 1;
+  });
+
+  return {
+    totalUsers: users.length,
+    activeToday,
+    activeWeek,
+    qualified,
+    closed,
+    hotLeads,
+    warmLeads,
+    coldLeads,
+    conversionRate: users.length > 0 ? ((closed / users.length) * 100).toFixed(1) : '0',
+    qualificationRate: users.length > 0 ? ((qualified / users.length) * 100).toFixed(1) : '0',
+    messagesWeek,
+    sites: {
+      total: sites.length,
+      collecting: sites.filter((s) => s.status === 'collecting').length,
+      preview: sites.filter((s) => s.status === 'preview').length,
+      approved: sites.filter((s) => s.status === 'approved').length,
+    },
+    audits: {
+      total: audits.length,
+      pending: audits.filter((a) => a.status === 'pending').length,
+      completed: audits.filter((a) => a.status === 'completed').length,
+      failed: audits.filter((a) => a.status === 'failed').length,
+    },
+    meetings: {
+      total: meetings.length,
+      pending: meetings.filter((m) => m.status === 'pending').length,
+      confirmed: meetings.filter((m) => m.status === 'confirmed').length,
+      cancelled: meetings.filter((m) => m.status === 'cancelled').length,
+    },
+    stateDistribution,
+  };
+}
+
+/**
+ * Get all leads with last activity info.
+ */
+// Supabase / PostgREST silently caps `.select(...)` to 1000 rows by
+// default. At scale that means a `count by user_id` over the entire
+// conversations table truncates and active users end up with an
+// inaccurate (often zero) message_count — the dashboard's conversation
+// list then filters those users out (`message_count === 0` is dropped),
+// even though they're sitting in the DB with full transcripts.
+//
+// This helper paginates a 'user_id'-scoped conversations query in
+// 1000-row chunks until exhausted, so counts and last-message lookups
+// see EVERY row. Cheap because each chunk is one indexed lookup.
+async function fetchAllConversationRows(userIds, columns, extraFilters = (q) => q) {
+  if (!userIds || userIds.length === 0) return [];
+  const PAGE = 1000;
+  // Chunk the `.in('user_id', …)` list. PostgREST encodes the filter into the
+  // request URL/headers, which it caps at ~16KB; once there are a few hundred
+  // users the full id list overflows and the whole query fails with
+  // UND_ERR_HEADERS_OVERFLOW — surfacing as a 500 on /api/leads. 100 UUIDs per
+  // request keeps the URL ~4KB. Rows from every chunk are merged; callers key
+  // results by user_id, so chunk boundaries don't matter.
+  const ID_CHUNK = 100;
+  // Hard upper bound on pagination iterations per chunk so a runaway query
+  // can't loop forever if Supabase ever changes pagination semantics.
+  const MAX_ITERATIONS = 200; // up to 200k rows per chunk
+
+  // Paginate one id-chunk to exhaustion.
+  const fetchChunk = async (idsChunk) => {
+    const rows = [];
+    let from = 0;
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      let q = supabase
+        .from('conversations')
+        .select(columns)
+        .in('user_id', idsChunk);
+      q = extraFilters(q);
+      const { data, error } = await q.range(from, from + PAGE - 1);
+      if (error) throw error;
+      rows.push(...(data || []));
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return rows;
+  };
+
+  const chunks = [];
+  for (let c = 0; c < userIds.length; c += ID_CHUNK) chunks.push(userIds.slice(c, c + ID_CHUNK));
+  // Chunks are independent → run them concurrently, then flatten.
+  const results = await Promise.all(chunks.map(fetchChunk));
+  return results.flat();
+}
+
+// Chunked `.in(idCol, ids)` SELECT for ANY table, run concurrently and merged.
+// Same purpose as fetchAllConversationRows but generic — keeps a few-hundred-id
+// filter from overflowing PostgREST's ~16KB request URL. Each chunk is capped at
+// Supabase's 1000-row default (fine for low-per-user tables: meetings, payments,
+// sites, audits, users). For high-volume conversations use the paginating helper.
+async function chunkedIn(table, columns, idCol, ids, build = (q) => q) {
+  if (!ids || ids.length === 0) return [];
+  const ID_CHUNK = 100;
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += ID_CHUNK) chunks.push(ids.slice(i, i + ID_CHUNK));
+  const results = await Promise.all(chunks.map(async (idsChunk) => {
+    const { data, error } = await build(supabase.from(table).select(columns).in(idCol, idsChunk));
+    if (error) throw error;
+    return data || [];
+  }));
+  return results.flat();
+}
+
+// Paginate an UNFILTERED select to exhaustion (no id list). A plain select
+// silently caps at 1000 rows; this walks 1000-row pages until the table is
+// drained, so bulk exports aren't truncated once a table passes 1000 rows.
+async function fetchAllRows(table, columns, build = (q) => q) {
+  const PAGE = 1000;
+  const MAX_ITERATIONS = 500; // up to 500k rows
+  const out = [];
+  let from = 0;
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    const { data, error } = await build(supabase.from(table).select(columns)).range(from, from + PAGE - 1);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  return out;
+}
+
+async function getLeads() {
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('*')
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Get last message time for each user. We track TWO timestamps:
+  //   - last_message_at: any role (used for sorting "most recent activity")
+  //   - last_inbound_at: role='user' ONLY (the WhatsApp 24h customer-service
+  //     window is reset by an inbound message; our outbound replies do NOT
+  //     reopen the window, so we must filter by role here to compute the
+  //     green/red indicator correctly).
+  const userIds = (users || []).map((u) => u.id);
+  const lastMessages = await fetchAllConversationRows(
+    userIds,
+    'user_id, created_at, role',
+    (q) => q.order('created_at', { ascending: false })
+  );
+
+  const lastMessageMap = {};
+  const lastInboundMap = {};
+  (lastMessages || []).forEach((m) => {
+    if (!lastMessageMap[m.user_id]) {
+      lastMessageMap[m.user_id] = m.created_at;
+    }
+    if (m.role === 'user' && !lastInboundMap[m.user_id]) {
+      lastInboundMap[m.user_id] = m.created_at;
+    }
+  });
+
+  // WhatsApp's customer-service window is 24 hours from the last INBOUND
+  // message. Outside this window, free-form replies get rejected with
+  // error 131030 and we must use an approved message template instead.
+  const WA_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  const computeWindow = (inboundAt) => {
+    if (!inboundAt) return { within_24h: false, hours_since_inbound: null };
+    const ms = nowMs - new Date(inboundAt).getTime();
+    return {
+      within_24h: ms < WA_WINDOW_MS,
+      hours_since_inbound: Math.floor(ms / (60 * 60 * 1000)),
+    };
+  };
+
+  // Get message counts per user — paginated so the silent 1000-row cap
+  // doesn't drop active users to message_count=0.
+  const messageCounts = await fetchAllConversationRows(userIds, 'user_id');
+
+  const countMap = {};
+  (messageCounts || []).forEach((m) => {
+    countMap[m.user_id] = (countMap[m.user_id] || 0) + 1;
+  });
+
+  // Flag users that have any manual (operator-sent) reply so the admin UI
+  // can highlight them in the conversations list. Same pagination guard.
+  const manualMessages = await fetchAllConversationRows(
+    userIds,
+    'user_id',
+    (q) => q.eq('message_type', 'manual')
+  );
+
+  const manualMap = {};
+  (manualMessages || []).forEach((m) => {
+    manualMap[m.user_id] = (manualMap[m.user_id] || 0) + 1;
+  });
+
+  // Paid users — any successful payment row marks the user as paid for the
+  // admin "Paid" filter. Webhook flips payments.status to 'paid' on
+  // checkout.session.completed.
+  const { data: paidRows } = await supabase
+    .from('payments')
+    .select('user_id')
+    .eq('status', 'paid');
+  const paidSet = new Set((paidRows || []).map((p) => p.user_id).filter(Boolean));
+
+  return (users || []).map((u) => {
+    const windowInfo = computeWindow(lastInboundMap[u.id]);
+    return {
+    id: u.id,
+    phone_number: u.phone_number,
+    name: u.name || '',
+    business_name: u.business_name || '',
+    state: u.state,
+    created_at: u.created_at,
+    updated_at: u.updated_at,
+    last_message_at: lastMessageMap[u.id] || u.updated_at,
+    last_inbound_at: lastInboundMap[u.id] || null,
+    within_24h: windowInfo.within_24h,
+    hours_since_inbound: windowInfo.hours_since_inbound,
+    message_count: countMap[u.id] || 0,
+    manual_count: manualMap[u.id] || 0,
+    // A conversation is considered "manual" if either (a) the operator sent
+    // any reply via the dashboard (yields message_type='manual' rows) OR
+    // (b) the operator currently has human takeover active for this user.
+    // Either signal means the AI isn't fully running this thread.
+    has_manual: (manualMap[u.id] || 0) > 0 || !!u.metadata?.humanTakeover,
+    human_takeover: !!u.metadata?.humanTakeover,
+    is_qualified: !!u.metadata?.leadBriefSent,
+    is_closed: !!u.metadata?.leadClosed,
+    is_favorite: !!u.metadata?.adminFavorite,
+    is_paid: paidSet.has(u.id),
+    lead_brief: u.metadata?.leadBrief || null,
+    lead_temperature: u.metadata?.leadTemperature || null,
+    closing_technique: u.metadata?.closingTechnique || null,
+    services_used: {
+      website: !!u.metadata?.websiteDemoTriggered,
+      seo: !!u.metadata?.seoAuditTriggered,
+      logo: !!u.metadata?.logoMakerTriggered,
+      ad: !!u.metadata?.adGeneratorTriggered,
+      chatbot: !!u.metadata?.chatbotDemoTriggered,
+      returnToSales: !!u.metadata?.returnToSales,
+    },
+    // Detected inbound language (cached per-user via the
+    // detect-language endpoint). null when not yet detected — admin
+    // panel shows nothing for those rows. Format: { name, code, detectedAt }.
+    detected_language: u.metadata?.detectedLanguage || null,
+    ad_source: u.metadata?.adSource || '',
+    channel: u.channel || 'whatsapp',
+    // Which of OUR WhatsApp numbers the user originally messaged. Surfacing
+    // it here lets the dashboard render a small pill so operators can tell
+    // apart two sessions of the same phone (one per line).
+    via_phone_number_id: u.via_phone_number_id || null,
+    // Tester flag — set via env TESTER_PHONES. Rendered as a small gray
+    // pill in the admin conversations list so operators don't mistake a
+    // dev test session for a real user.
+    is_tester: (() => {
+      try {
+        const { isTester } = require('../feedback/feedback');
+        return isTester({ phone_number: u.phone_number });
+      } catch {
+        return false;
+      }
+    })(),
+    };
+  });
+}
+
+/**
+ * Get full conversation history for a user.
+ */
+async function getConversation(userId) {
+  const [userResult, messagesResult] = await Promise.all([
+    supabase.from('users').select('*').eq('id', userId).single(),
+    // Sort by the monotonic `seq` column so messages inserted in the same
+    // millisecond keep their true insertion order. `created_at` is a
+    // secondary tiebreaker for older rows whose seq may have been assigned
+    // out of order by the migration backfill.
+    supabase
+      .from('conversations')
+      .select('*')
+      .eq('user_id', userId)
+      .order('seq', { ascending: true })
+      .order('created_at', { ascending: true }),
+  ]);
+
+  const messages = messagesResult.data || [];
+
+  // Derive the 24h-window indicator from the message list we already
+  // fetched — no extra query. `last_inbound_at` is the most recent
+  // message with role='user'.
+  let lastInboundAt = null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') {
+      lastInboundAt = messages[i].created_at;
+      break;
+    }
+  }
+  const WA_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const ms = lastInboundAt ? Date.now() - new Date(lastInboundAt).getTime() : null;
+  const window = {
+    last_inbound_at: lastInboundAt,
+    within_24h: ms != null && ms < WA_WINDOW_MS,
+    hours_since_inbound: ms != null ? Math.floor(ms / (60 * 60 * 1000)) : null,
+  };
+
+  // Latest submitted WhatsApp Flow form. This lives in flow_sessions, which
+  // /reset does NOT clear — unlike user.metadata.websiteData — so the admin
+  // can always see exactly what the user entered in the form, even after a
+  // reset or a later state change. Best-effort: never block the load.
+  let flowSubmission = null;
+  try {
+    const { data: fs } = await supabase
+      .from('flow_sessions')
+      .select('answers, theme, submitted_at')
+      .eq('user_id', userId)
+      .eq('status', 'submitted')
+      .order('submitted_at', { ascending: false, nullsFirst: false })
+      .limit(1);
+    if (fs && fs.length && fs[0].answers && Object.keys(fs[0].answers).length) {
+      flowSubmission = fs[0];
+    }
+  } catch (_) { /* flow_sessions is optional context */ }
+
+  return {
+    user: userResult.data,
+    messages,
+    window,
+    flowSubmission,
+  };
+}
+
+/**
+ * Get feedback rows with filters. Returns both a list (cards) and
+ * summary metrics the admin page renders as cards at the top.
+ */
+async function getFeedback(filters = {}) {
+  const {
+    source = 'all',
+    rating = 'all',
+    flow = 'all',
+    resolved = 'all',
+    limit = 200,
+  } = filters;
+
+  let q = supabase
+    .from('feedback')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (source !== 'all') q = q.eq('source', source);
+  if (rating !== 'all') q = q.eq('rating', rating);
+  if (flow !== 'all') q = q.eq('flow', flow);
+  if (resolved === 'open') q = q.eq('resolved', false);
+  if (resolved === 'resolved') q = q.eq('resolved', true);
+
+  const { data: rows, error } = await q;
+  if (error) throw error;
+
+  // Join user names + channels for display. One round-trip.
+  const userIds = [...new Set((rows || []).map((r) => r.user_id).filter(Boolean))];
+  let userMap = {};
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, name, channel, phone_number')
+      .in('id', userIds);
+    (users || []).forEach((u) => {
+      userMap[u.id] = { name: u.name, channel: u.channel, phone_number: u.phone_number };
+    });
+  }
+
+  // Summary metrics across ALL rows (not filtered) so the top cards
+  // stay stable as the user filters.
+  const { data: allRows } = await supabase
+    .from('feedback')
+    .select('source, rating, resolved, flow, created_at');
+  const summary = {
+    total: (allRows || []).length,
+    open: (allRows || []).filter((r) => !r.resolved).length,
+    loved: (allRows || []).filter((r) => r.rating === 'loved').length,
+    good: (allRows || []).filter((r) => r.rating === 'good').length,
+    issues: (allRows || []).filter((r) => r.rating === 'issues').length,
+    implicit: (allRows || []).filter((r) => r.source === 'implicit').length,
+    explicit: (allRows || []).filter((r) => r.source === 'explicit').length,
+    byFlow: {},
+  };
+  (allRows || []).forEach((r) => {
+    const f = r.flow || 'general';
+    summary.byFlow[f] = (summary.byFlow[f] || 0) + 1;
+  });
+
+  return {
+    filters,
+    summary,
+    rows: (rows || []).map((r) => ({
+      ...r,
+      user_name: userMap[r.user_id]?.name || null,
+      user_channel: userMap[r.user_id]?.channel || 'whatsapp',
+    })),
+  };
+}
+
+/**
+ * Get drop-off analysis — users who stopped at collection states.
+ */
+async function getDropoffs() {
+  const { data: users } = await supabase.from('users').select('*');
+
+  // Get last message time for each
+  const userIds = (users || []).map((u) => u.id);
+  const { data: lastMessages } = await supabase
+    .from('conversations')
+    .select('user_id, created_at, message_text, role')
+    .in('user_id', userIds.length > 0 ? userIds : ['none'])
+    .order('created_at', { ascending: false });
+
+  const lastMsgMap = {};
+  const lastUserMsgMap = {};
+  (lastMessages || []).forEach((m) => {
+    if (!lastMsgMap[m.user_id]) lastMsgMap[m.user_id] = m;
+    if (!lastUserMsgMap[m.user_id] && m.role === 'user') lastUserMsgMap[m.user_id] = m;
+  });
+
+  const now = new Date();
+  const dropoffs = (users || [])
+    .map((u) => {
+      const lastMsg = lastMsgMap[u.id];
+      const lastUserMsg = lastUserMsgMap[u.id];
+      const lastActive = lastMsg ? new Date(lastMsg.created_at) : new Date(u.updated_at);
+      const hoursInactive = (now - lastActive) / (1000 * 60 * 60);
+
+      return {
+        id: u.id,
+        phone_number: u.phone_number,
+        name: u.name || '',
+        state: u.state,
+        hours_inactive: Math.round(hoursInactive),
+        last_message_at: lastMsg?.created_at || u.updated_at,
+        last_bot_message: lastMsg?.role === 'assistant' ? (lastMsg.message_text || '').slice(0, 150) : '',
+        last_user_message: lastUserMsg ? (lastUserMsg.message_text || '').slice(0, 150) : '',
+        is_qualified: !!u.metadata?.leadBriefSent,
+        is_closed: !!u.metadata?.leadClosed,
+      };
+    })
+    .filter((u) => u.hours_inactive > 24 && !u.is_closed)
+    .sort((a, b) => a.hours_inactive - b.hours_inactive);
+
+  return dropoffs;
+}
+
+/**
+ * Get all generated sites with user info.
+ */
+async function getSites() {
+  const { data } = await supabase
+    .from('generated_sites')
+    .select('*, users(phone_number, name)')
+    .order('created_at', { ascending: false });
+
+  return (data || []).map((s) => ({
+    id: s.id,
+    user_phone: s.users?.phone_number || '',
+    user_name: s.users?.name || '',
+    template_id: s.template_id,
+    status: s.status,
+    preview_url: s.preview_url || '',
+    created_at: s.created_at,
+    updated_at: s.updated_at,
+    business_name: s.site_data?.businessName || '',
+  }));
+}
+
+/**
+ * Get all SEO audits with user info and scraped data.
+ */
+async function getAudits() {
+  const { data } = await supabase
+    .from('website_audits')
+    .select('*, users(phone_number, name)')
+    .order('created_at', { ascending: false });
+
+  return (data || []).map((a) => {
+    const raw = a.raw_data || {};
+    // Extract a score from the analysis text if present
+    const scoreMatch = (a.analysis_text || '').match(/(?:overall\s*score|score)\s*[:\-]?\s*(\d{1,3})\s*(?:\/\s*100|out of 100)?/i);
+    const score = scoreMatch ? parseInt(scoreMatch[1]) : null;
+
+    return {
+      id: a.id,
+      user_phone: a.users?.phone_number || '',
+      user_name: a.users?.name || '',
+      url: a.url,
+      status: a.status,
+      created_at: a.created_at,
+      score,
+      analysis: a.analysis_text || '',
+      // Scraped metrics
+      metrics: {
+        title: raw.title || '',
+        metaDescription: raw.metaDescription || '',
+        hasViewport: !!raw.hasViewport,
+        isHttps: !!raw.isHttps,
+        loadTimeMs: raw.loadTimeMs || 0,
+        bodyTextLength: raw.bodyTextLength || 0,
+        htmlSize: raw.htmlSize || 0,
+        totalImages: raw.totalImages || 0,
+        imagesWithoutAlt: raw.imagesWithoutAlt || 0,
+        totalLinks: raw.totalLinks || 0,
+        externalLinks: raw.externalLinks || 0,
+        h1: (raw.headings?.h1 || []),
+        h2Count: (raw.headings?.h2 || []).length,
+        ogTitle: raw.og?.title || '',
+        ogDescription: raw.og?.description || '',
+        ogImage: raw.og?.image || '',
+      },
+    };
+  });
+}
+
+/**
+ * Get all meetings with details.
+ */
+async function getMeetings() {
+  const { data } = await supabase
+    .from('meetings')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return data || [];
+}
+
+/**
+ * Get funnel data: how users progress through stages.
+ */
+async function getFunnel() {
+  const { data: users } = await supabase.from('users').select('state, metadata, created_at');
+  const allUsers = users || [];
+
+  // Define funnel stages
+  const stages = [
+    { name: 'Total Visitors', count: allUsers.length },
+    { name: 'Engaged (past Welcome)', count: allUsers.filter((u) => u.state !== 'WELCOME').length },
+    {
+      name: 'Service Selected',
+      count: allUsers.filter(
+        (u) =>
+          u.state !== 'WELCOME' && u.state !== 'SERVICE_SELECTION'
+      ).length,
+    },
+    {
+      name: 'Used a Service',
+      count: allUsers.filter(
+        (u) => u.metadata?.websiteDemoTriggered || u.metadata?.seoAuditTriggered
+      ).length,
+    },
+    { name: 'Lead Qualified', count: allUsers.filter((u) => u.metadata?.leadBriefSent).length },
+    { name: 'Lead Closed', count: allUsers.filter((u) => u.metadata?.leadClosed).length },
+  ];
+
+  return stages;
+}
+
+/**
+ * Get hourly message volume for the past 7 days.
+ */
+async function getMessageVolume() {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from('conversations')
+    .select('created_at, role')
+    .gte('created_at', weekAgo)
+    .order('created_at');
+
+  // Group by day
+  const byDay = {};
+  (data || []).forEach((m) => {
+    const day = m.created_at.slice(0, 10);
+    if (!byDay[day]) byDay[day] = { user: 0, assistant: 0 };
+    byDay[day][m.role]++;
+  });
+
+  return byDay;
+}
+
+/**
+ * Get all payments with user info.
+ */
+async function getPayments() {
+  const { data } = await supabase
+    .from('payments')
+    .select('*, users(phone_number, name)')
+    .order('created_at', { ascending: false });
+
+  return (data || []).map(p => ({
+    id: p.id,
+    user_phone: p.users?.phone_number || p.phone_number || '',
+    user_name: p.users?.name || p.customer_name || '',
+    amount: p.amount,
+    currency: p.currency,
+    status: p.status,
+    service_type: p.service_type || '',
+    package_tier: p.package_tier || '',
+    description: p.description || '',
+    customer_email: p.customer_email || '',
+    stripe_payment_link_url: p.stripe_payment_link_url || '',
+    paid_at: p.paid_at,
+    created_at: p.created_at,
+  }));
+}
+
+/**
+ * Get revenue stats for the dashboard.
+ */
+async function getRevenue() {
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('amount, currency, status, service_type, package_tier, paid_at, created_at');
+
+  const all = payments || [];
+  const paid = all.filter(p => p.status === 'paid');
+  const pending = all.filter(p => p.status === 'pending');
+
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+
+  const paidThisMonth = paid.filter(p => p.paid_at && p.paid_at >= thisMonthStart);
+  const paidLastMonth = paid.filter(p => p.paid_at && p.paid_at >= lastMonthStart && p.paid_at <= lastMonthEnd);
+
+  const totalRevenue = paid.reduce((s, p) => s + p.amount, 0);
+  const revenueThisMonth = paidThisMonth.reduce((s, p) => s + p.amount, 0);
+  const revenueLastMonth = paidLastMonth.reduce((s, p) => s + p.amount, 0);
+  const pendingAmount = pending.reduce((s, p) => s + p.amount, 0);
+
+  // Revenue by service type
+  const byService = {};
+  paid.forEach(p => {
+    const svc = p.service_type || 'other';
+    byService[svc] = (byService[svc] || 0) + p.amount;
+  });
+
+  // Revenue by month (last 6 months)
+  const byMonth = {};
+  paid.forEach(p => {
+    const month = (p.paid_at || p.created_at || '').slice(0, 7);
+    if (month) byMonth[month] = (byMonth[month] || 0) + p.amount;
+  });
+
+  return {
+    totalRevenue,
+    revenueThisMonth,
+    revenueLastMonth,
+    pendingAmount,
+    totalPaid: paid.length,
+    totalPending: pending.length,
+    totalPayments: all.length,
+    avgDealSize: paid.length > 0 ? Math.round(totalRevenue / paid.length) : 0,
+    byService,
+    byMonth,
+  };
+}
+
+/**
+ * Get detailed lead profiles for the sales prep page.
+ * Includes conversation summary, meetings, payments, websites, audits - everything
+ * a salesperson needs before calling a lead.
+ */
+async function getSalesPrep() {
+  // Get all users who are qualified or closed (worth calling)
+  const { data: users } = await supabase
+    .from('users')
+    .select('*')
+    .order('updated_at', { ascending: false });
+
+  if (!users || users.length === 0) return [];
+
+  const userIds = users.map(u => u.id);
+
+  // Fetch all related data in parallel. Every user-id filter is chunked so a
+  // few-hundred-user list can't overflow the PostgREST request URL (the same
+  // limit that 500'd /api/leads). Conversations go through fetchAllConversationRows
+  // (chunked AND paginated); the low-per-user tables use chunkedIn.
+  const [allMessages, allMeetings, allPayments, allSites, allAudits] = await Promise.all([
+    fetchAllConversationRows(userIds, 'user_id, message_text, role, created_at', (q) => q.order('created_at', { ascending: true })),
+    chunkedIn('meetings', '*', 'user_id', userIds, (q) => q.order('created_at', { ascending: false })),
+    chunkedIn('payments', '*', 'user_id', userIds, (q) => q.order('created_at', { ascending: false })),
+    chunkedIn('generated_sites', 'id, user_id, preview_url, status, site_data, created_at', 'user_id', userIds, (q) => q.order('created_at', { ascending: false })),
+    chunkedIn('website_audits', 'id, user_id, url, status, analysis_text, created_at', 'user_id', userIds, (q) => q.order('created_at', { ascending: false })),
+  ]);
+
+  // Build lookup maps
+  const msgMap = {};
+  allMessages.forEach(m => {
+    if (!msgMap[m.user_id]) msgMap[m.user_id] = [];
+    msgMap[m.user_id].push(m);
+  });
+
+  const meetingMap = {};
+  allMeetings.forEach(m => {
+    if (!meetingMap[m.user_id]) meetingMap[m.user_id] = [];
+    meetingMap[m.user_id].push(m);
+  });
+
+  const paymentMap = {};
+  allPayments.forEach(p => {
+    if (!paymentMap[p.user_id]) paymentMap[p.user_id] = [];
+    paymentMap[p.user_id].push(p);
+  });
+
+  const siteMap = {};
+  allSites.forEach(s => {
+    if (!siteMap[s.user_id]) siteMap[s.user_id] = [];
+    siteMap[s.user_id].push(s);
+  });
+
+  const auditMap = {};
+  allAudits.forEach(a => {
+    if (!auditMap[a.user_id]) auditMap[a.user_id] = [];
+    auditMap[a.user_id].push(a);
+  });
+
+  return users.map(u => {
+    const msgs = msgMap[u.id] || [];
+    const meetings = meetingMap[u.id] || [];
+    const payments = paymentMap[u.id] || [];
+    const sites = siteMap[u.id] || [];
+    const audits = auditMap[u.id] || [];
+    const meta = u.metadata || {};
+
+    // Build conversation highlights - key messages
+    const userMessages = msgs.filter(m => m.role === 'user').map(m => m.message_text).filter(Boolean);
+    const lastUserMsg = userMessages.length > 0 ? userMessages[userMessages.length - 1] : '';
+    const lastBotMsg = msgs.filter(m => m.role === 'assistant').map(m => m.message_text).filter(Boolean).pop() || '';
+
+    // Extract key topics from conversation
+    const allText = userMessages.join(' ').toLowerCase();
+    const topics = [];
+    if (/website|site|landing page|redesign/i.test(allText)) topics.push('Website');
+    if (/seo|google|rank|search/i.test(allText)) topics.push('SEO');
+    if (/app|mobile|android|ios/i.test(allText)) topics.push('App Dev');
+    if (/social media|smm|instagram|facebook|tiktok/i.test(allText)) topics.push('Social Media');
+    if (/ecommerce|store|shop|product/i.test(allText)) topics.push('Ecommerce');
+    if (/marketing|ads|advertis/i.test(allText)) topics.push('Marketing');
+
+    return {
+      id: u.id,
+      phone_number: u.phone_number,
+      name: u.name || '',
+      business_name: u.business_name || meta.websiteData?.businessName || '',
+      industry: meta.websiteData?.industry || '',
+      state: u.state,
+      created_at: u.created_at,
+      updated_at: u.updated_at,
+
+      // Status flags
+      is_qualified: !!meta.leadBriefSent,
+      is_closed: !!meta.leadClosed,
+      payment_confirmed: !!meta.paymentConfirmed,
+      ad_source: meta.adSource || '',
+      lead_temperature: meta.leadTemperature || null,
+      closing_technique: meta.closingTechnique || null,
+
+      // Lead brief (AI-generated qualification summary)
+      lead_brief: meta.leadBrief || null,
+
+      // Conversation stats
+      total_messages: msgs.length,
+      user_messages: userMessages.length,
+      last_user_message: lastUserMsg.slice(0, 200),
+      last_bot_message: lastBotMsg.slice(0, 200),
+      last_activity: msgs.length > 0 ? msgs[msgs.length - 1].created_at : u.updated_at,
+      topics_discussed: topics,
+
+      // Meetings
+      meetings: meetings.filter(m => m.preferred_date || m.preferred_time).map(m => {
+        // Clean summary - strip lead brief content that sometimes leaks into chat_summary
+        const rawSummary = m.chat_summary || '';
+        const cleanSummary = (rawSummary.includes('Lead Name') || rawSummary.includes('**')) ? '' : rawSummary;
+        return {
+          id: m.id,
+          date: m.preferred_date,
+          time: m.preferred_time,
+          timezone: m.preferred_timezone,
+          topic: m.topic,
+          status: m.status,
+          summary: cleanSummary,
+        };
+      }),
+
+      // Payments
+      payments: payments.map(p => ({
+        amount: p.amount,
+        status: p.status,
+        service: p.service_type,
+        tier: p.package_tier,
+        description: p.description,
+        paid_at: p.paid_at,
+        created_at: p.created_at,
+      })),
+
+      // Websites generated
+      websites: sites.map(s => ({
+        preview_url: s.preview_url,
+        status: s.status,
+        business_name: s.site_data?.businessName || '',
+        created_at: s.created_at,
+      })),
+
+      // SEO audits
+      audits: audits.map(a => ({
+        url: a.url,
+        status: a.status,
+        summary: (a.analysis_text || '').slice(0, 300),
+        created_at: a.created_at,
+      })),
+
+      // Services used
+      services_used: {
+        website_demo: !!meta.websiteDemoTriggered,
+        seo_audit: !!meta.seoAuditTriggered,
+      },
+    };
+  });
+}
+
+/**
+ * Generate a lead summary from conversation history using LLM.
+ */
+async function generateLeadSummary(userId) {
+  // Fetch conversation
+  const { data: messages } = await supabase
+    .from('conversations')
+    .select('message_text, role, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(60);
+
+  if (!messages || messages.length < 4) return null;
+
+  // Fetch user metadata
+  const { data: user } = await supabase.from('users').select('name, phone_number, metadata').eq('id', userId).single();
+
+  const chatLog = messages.map(m => (m.role === 'user' ? 'Client' : 'Bot') + ': ' + (m.message_text || '').slice(0, 300)).join('\n');
+
+  const { generateResponse } = require('../llm/provider');
+  const prompt = `You are a sales operations assistant. Analyze this WhatsApp conversation between a sales bot and a lead, then produce a structured brief for the human salesperson who will call this lead.
+
+Return ONLY this exact format (fill in each field):
+
+Name: [client name or "Unknown"]
+Business: [business name or "Unknown"]
+Industry: [industry or "Unknown"]
+Service Needed: [what they want]
+Budget: [their budget or stated price point]
+Timeline: [when they need it]
+Package Discussed: [what package/tier was discussed and at what price]
+Pain Point: [their main goal or problem]
+Personality: [Cool/Professional/Unsure/Negotiator - based on how they write]
+Language: [what language they communicate in]
+Objections: [any pushback or concerns they raised, or "None"]
+Payment Status: [whether they paid, and how much, or "No payment yet"]
+Conversation Summary: [2-3 sentence summary of how the conversation went, what was discussed, what the client cares about, and what the salesperson should focus on during the call. Be specific and actionable.]`;
+
+  try {
+    const response = await generateResponse(prompt, [{ role: 'user', content: chatLog }], {
+      userId,
+      operation: 'admin_lead_brief',
+    });
+
+    // Save it to user metadata so we don't regenerate every time
+    await supabase.from('users').update({
+      metadata: { ...(user?.metadata || {}), leadBrief: response, leadBriefSent: true }
+    }).eq('id', userId);
+
+    return response;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function getDomainRequests() {
+  const { data: sites, error } = await supabase
+    .from('generated_sites')
+    .select('id, user_id, custom_domain, preview_url, netlify_site_id, status, created_at, updated_at')
+    .not('custom_domain', 'is', null)
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+  if (!sites || sites.length === 0) return [];
+
+  // Get user info for each site
+  const userIds = [...new Set(sites.map(s => s.user_id))];
+  const { data: users } = await supabase
+    .from('users')
+    .select('id, phone_number, name, metadata')
+    .in('id', userIds);
+
+  const userMap = {};
+  (users || []).forEach(u => { userMap[u.id] = u; });
+
+  return sites.map(s => {
+    const u = userMap[s.user_id] || {};
+    return {
+      id: s.id,
+      domain: s.custom_domain,
+      status: s.status,
+      preview_url: s.preview_url,
+      netlify_site_id: s.netlify_site_id,
+      user_phone: u.phone_number || '',
+      user_name: u.name || u.metadata?.websiteData?.businessName || '',
+      user_email: u.metadata?.email || '',
+      created_at: s.created_at,
+      updated_at: s.updated_at,
+    };
+  });
+}
+
+/**
+ * Attribute leads + revenue to the ad creatives that brought them in.
+ *
+ * Groups users who have metadata.adSource set by (adSource, sourceId,
+ * headline) — where sourceId is Meta's per-creative identifier — and joins
+ * against the payments table to compute closes and revenue per bucket.
+ *
+ * opts.days: optional look-back window (default: all-time). Only leads whose
+ * first message was inside the window count toward that row.
+ *
+ * Returns: {
+ *   byCreative: [
+ *     { adSource, sourceId, headline, platform, leads, closes, closeRatePct,
+ *       revenueCents, avgRevenueCents, firstSeenAt, lastSeenAt },
+ *     ...
+ *   ],
+ *   byChannel: { [channel]: { leads, closes, revenueCents } },
+ *   bySource: { [adSource]: { leads, closes, revenueCents } },
+ *   totals: { leads, closes, closeRatePct, revenueCents, creatives }
+ * }
+ */
+async function getAdAttribution(opts = {}) {
+  const { days } = opts;
+  const sinceIso = Number.isFinite(days) && days > 0
+    ? new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
+  // Pull every user that arrived via an ad. sinceIso (when set) restricts to
+  // leads whose account was created inside the window — close enough to "ad
+  // clicks in the last N days" since the user row is created on first DM.
+  let usersQuery = supabase
+    .from('users')
+    .select('id, channel, created_at, metadata')
+    .not('metadata->>adSource', 'is', null);
+  if (sinceIso) usersQuery = usersQuery.gte('created_at', sinceIso);
+
+  const { data: users, error: userErr } = await usersQuery;
+  if (userErr) throw userErr;
+
+  const adUsers = (users || []).filter((u) => (u.metadata?.adSource || '').length > 0);
+  if (adUsers.length === 0) {
+    return {
+      byCreative: [],
+      byChannel: {},
+      bySource: {},
+      totals: { leads: 0, closes: 0, closeRatePct: '0', revenueCents: 0, creatives: 0 },
+      windowDays: days || null,
+    };
+  }
+
+  // Pull paid payments for just the ad-attributed users. A single user can
+  // have multiple payments (split, upsell, etc.) — sum them all.
+  const userIds = adUsers.map((u) => u.id);
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('user_id, amount, status, paid_at')
+    .in('user_id', userIds)
+    .eq('status', 'paid');
+
+  const revenueByUser = {};
+  (payments || []).forEach((p) => {
+    revenueByUser[p.user_id] = (revenueByUser[p.user_id] || 0) + (p.amount || 0);
+  });
+
+  // Bucket by (adSource + sourceId + headline). sourceId differentiates two
+  // creatives that share the same headline; headline is kept so the table is
+  // human-readable even when Meta doesn't surface the sourceId.
+  const creativeMap = {};
+  const channelMap = {};
+  const sourceMap = {};
+  let totalRevenue = 0;
+  let totalCloses = 0;
+
+  adUsers.forEach((u) => {
+    const meta = u.metadata || {};
+    const adSource = meta.adSource || 'unknown';
+    const ref = meta.adReferral || {};
+    const sourceId = ref.sourceId || '';
+    const headline = (ref.headline || '').slice(0, 120);
+    const platform = ref.platform || u.channel || 'unknown';
+    const key = `${adSource}|${sourceId}|${headline}`;
+
+    if (!creativeMap[key]) {
+      creativeMap[key] = {
+        adSource,
+        sourceId,
+        headline,
+        platform,
+        adBody: (ref.body || '').slice(0, 180),
+        leads: 0,
+        closes: 0,
+        revenueCents: 0,
+        firstSeenAt: u.created_at,
+        lastSeenAt: u.created_at,
+      };
+    }
+    const bucket = creativeMap[key];
+    bucket.leads += 1;
+    if (u.created_at < bucket.firstSeenAt) bucket.firstSeenAt = u.created_at;
+    if (u.created_at > bucket.lastSeenAt) bucket.lastSeenAt = u.created_at;
+
+    const rev = revenueByUser[u.id] || 0;
+    if (rev > 0) {
+      bucket.closes += 1;
+      bucket.revenueCents += rev;
+      totalCloses += 1;
+      totalRevenue += rev;
+    }
+
+    if (!channelMap[platform]) channelMap[platform] = { leads: 0, closes: 0, revenueCents: 0 };
+    channelMap[platform].leads += 1;
+    if (rev > 0) { channelMap[platform].closes += 1; channelMap[platform].revenueCents += rev; }
+
+    if (!sourceMap[adSource]) sourceMap[adSource] = { leads: 0, closes: 0, revenueCents: 0 };
+    sourceMap[adSource].leads += 1;
+    if (rev > 0) { sourceMap[adSource].closes += 1; sourceMap[adSource].revenueCents += rev; }
+  });
+
+  const byCreative = Object.values(creativeMap).map((c) => ({
+    ...c,
+    closeRatePct: c.leads > 0 ? ((c.closes / c.leads) * 100).toFixed(1) : '0',
+    avgRevenueCents: c.closes > 0 ? Math.round(c.revenueCents / c.closes) : 0,
+  })).sort((a, b) => b.revenueCents - a.revenueCents || b.closes - a.closes || b.leads - a.leads);
+
+  const totals = {
+    leads: adUsers.length,
+    closes: totalCloses,
+    closeRatePct: adUsers.length > 0 ? ((totalCloses / adUsers.length) * 100).toFixed(1) : '0',
+    revenueCents: totalRevenue,
+    creatives: byCreative.length,
+  };
+
+  return { byCreative, byChannel: channelMap, bySource: sourceMap, totals, windowDays: days || null };
+}
+
+async function getLeadSummaries() {
+  const { data, error } = await supabase
+    .from('lead_summaries')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+async function getAllConversationsBulk() {
+  // Paginate both tables — a single select silently caps at 1000 rows, which
+  // would truncate the export once there are >1000 users or messages.
+  const [users, msgs] = await Promise.all([
+    fetchAllRows('users', 'id, phone_number, name, channel', (q) => q.order('created_at', { ascending: true })),
+    fetchAllRows('conversations', 'user_id, role, message_text, created_at, seq', (q) => q.order('seq', { ascending: true }).order('created_at', { ascending: true })),
+  ]);
+
+  // group messages by user_id
+  const byUser = {};
+  for (const m of msgs) {
+    if (!byUser[m.user_id]) byUser[m.user_id] = [];
+    byUser[m.user_id].push(m);
+  }
+
+  // build TXT lines
+  const lines = [];
+  lines.push('Pixie — Bulk Chat Export');
+  lines.push('Exported: ' + new Date().toLocaleString());
+  lines.push('Total users: ' + users.length);
+  lines.push('');
+
+  for (const u of users) {
+    const userMsgs = byUser[u.id] || [];
+    if (!userMsgs.length) continue;
+    const label = (u.name ? u.name + ' ' : '') + '(' + (u.phone_number || u.id) + ')' + (u.channel && u.channel !== 'whatsapp' ? ' [' + u.channel + ']' : '');
+    lines.push('════════════════════════════════════════');
+    lines.push('Contact: ' + label);
+    lines.push('Messages: ' + userMsgs.length);
+    lines.push('────────────────────────────────────────');
+    for (const m of userMsgs) {
+      if (m.role === 'system') {
+        lines.push('── ' + (m.message_text || 'system event') + ' ──');
+      } else {
+        const who = m.role === 'user' ? (u.name || u.phone_number || 'User') : 'Pixie';
+        const ts = m.created_at ? new Date(m.created_at).toLocaleString() : '';
+        lines.push('[' + ts + '] ' + who + ':');
+        lines.push(m.message_text || '(media/non-text)');
+      }
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n');
+}
+
+async function getSelectedConversationsBulk(userIds) {
+  if (!userIds || !userIds.length) return '';
+  const [users, msgs] = await Promise.all([
+    chunkedIn('users', 'id, phone_number, name, channel', 'id', userIds),
+    fetchAllConversationRows(userIds, 'user_id, role, message_text, created_at, seq', (q) =>
+      q.order('seq', { ascending: true }).order('created_at', { ascending: true })
+    ),
+  ]);
+
+  const byUser = {};
+  for (const m of msgs) {
+    if (!byUser[m.user_id]) byUser[m.user_id] = [];
+    byUser[m.user_id].push(m);
+  }
+
+  const lines = [];
+  lines.push('Pixie — Selected Chats Export');
+  lines.push('Exported: ' + new Date().toLocaleString());
+  lines.push('');
+
+  for (const u of users) {
+    const userMsgs = byUser[u.id] || [];
+    if (!userMsgs.length) continue;
+    const label = (u.name ? u.name + ' ' : '') + '(' + (u.phone_number || u.id) + ')' + (u.channel && u.channel !== 'whatsapp' ? ' [' + u.channel + ']' : '');
+    lines.push('════════════════════════════════════════');
+    lines.push('Contact: ' + label);
+    lines.push('Messages: ' + userMsgs.length);
+    lines.push('────────────────────────────────────────');
+    for (const m of userMsgs) {
+      if (m.role === 'system') {
+        lines.push('── ' + (m.message_text || 'system event') + ' ──');
+      } else {
+        const who = m.role === 'user' ? (u.name || u.phone_number || 'User') : 'Pixie';
+        const ts = m.created_at ? new Date(m.created_at).toLocaleString() : '';
+        lines.push('[' + ts + '] ' + who + ':');
+        lines.push(m.message_text || '(media/non-text)');
+      }
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n');
+}
+
+module.exports = {
+  getOverviewMetrics,
+  getLeads,
+  getConversation,
+  getAllConversationsBulk,
+  getSelectedConversationsBulk,
+  getFeedback,
+  getDropoffs,
+  getSites,
+  getAudits,
+  getMeetings,
+  getFunnel,
+  getMessageVolume,
+  getPayments,
+  getRevenue,
+  getSalesPrep,
+  generateLeadSummary,
+  getLeadSummaries,
+  getDomainRequests,
+  getAdAttribution,
+};

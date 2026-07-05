@@ -1,0 +1,2157 @@
+const { findOrCreateUser, updateUserState, updateUserMetadata } = require('../db/users');
+const { logMessage } = require('../db/conversations');
+const { markAsRead, sendTextMessage, sendInteractiveButtons, sendWithMenuButton, setLastMessageId, sendImage } = require('../messages/sender');
+const { runWithContext, setUserId, setTurnId } = require('../messages/channelContext');
+const { randomUUID } = require('crypto');
+const { STATES } = require('./states');
+const { logger } = require('../utils/logger');
+const { generateResponse } = require('../llm/provider');
+const { GENERAL_CHAT_PROMPT, WEB_REVISIONS_ASIDE_PROMPT, getAdPreviewUrl } = require('../llm/prompts');
+const { classifyExamplesRequest, resolveShowcaseIndustry } = require('./sampleShowcase');
+const { transcribeAudio } = require('../llm/transcribe');
+const { maybeUpdateSummary } = require('./summaryManager');
+const {
+  classifyUndoOrKeep,
+  pushStateHistory,
+  handleUndo,
+  clearUndoPending,
+  UNDOABLE_STATES,
+} = require('./undoStack');
+const messageBuffer = require('./messageBuffer');
+const { handleObjection } = require('./handlers/objectionHandler');
+const { localize } = require('../utils/localizer');
+
+// ── Message dedup ─────────────────────────────────────────────────────────
+// WhatsApp can occasionally redeliver the same inbound message (network blip,
+// ACK miss between Meta and our server). Without this, /reset could fire
+// twice in a row and the user sees duplicate greetings. LRU-capped so
+// memory stays bounded under load.
+const RECENT_MESSAGES = new Map(); // key = `${from}:${messageId}` → timestamp
+const DEDUP_WINDOW_MS = 60_000;
+const DEDUP_MAX_ENTRIES = 2000;
+
+function seenRecently(from, messageId) {
+  if (!messageId) return false; // can't dedup without an ID
+  const key = `${from}:${messageId}`;
+  const now = Date.now();
+  const last = RECENT_MESSAGES.get(key);
+  if (last && now - last < DEDUP_WINDOW_MS) return true;
+  RECENT_MESSAGES.set(key, now);
+  // Cheap eviction: if the map grew past the cap, drop the oldest 20% so
+  // occasional large bursts don't leak memory.
+  if (RECENT_MESSAGES.size > DEDUP_MAX_ENTRIES) {
+    const keys = Array.from(RECENT_MESSAGES.keys()).slice(0, Math.floor(DEDUP_MAX_ENTRIES * 0.2));
+    for (const k of keys) RECENT_MESSAGES.delete(k);
+  }
+  return false;
+}
+
+// ── Per-user serial processing ────────────────────────────────────────────
+// Two inbound webhooks for the same user can land in parallel (/reset
+// followed by the user's first real message, for example). Without a lock
+// they process concurrently, which causes weird races: /reset's DB cleanup
+// is slow, its greeting fires AFTER the next message's reply, and the user
+// sees "greeting → real reply → greeting" out of order.
+//
+// This is a Map<phoneNumber, Promise> that chains pending work. Each turn
+// awaits the previous turn's completion before running.
+const USER_LOCKS = new Map();
+
+function withUserLock(from, fn) {
+  const previous = USER_LOCKS.get(from) || Promise.resolve();
+  const current = previous.then(fn, fn); // run regardless of prior success/failure
+  USER_LOCKS.set(from, current);
+  // Clean up the map entry once this turn finishes, but ONLY if nothing newer
+  // has queued on top of us. Otherwise a later turn would lose its chain.
+  current.finally(() => {
+    if (USER_LOCKS.get(from) === current) USER_LOCKS.delete(from);
+  });
+  return current;
+}
+
+/**
+ * Identify which product an ad is promoting based on the ad body text.
+ */
+function identifyProduct(adBody) {
+  const body = (adBody || '').toLowerCase();
+  if (body.includes('chatbot') || body.includes('bot') || body.includes('automation') || body.includes('ai assistant')) return 'chatbot';
+  if (body.includes('website') || body.includes('web design') || body.includes('web development') || body.includes('landing page')) return 'web';
+  if (body.includes('seo') || body.includes('ranking') || body.includes('google rank')) return 'seo';
+  if (body.includes('social media') || body.includes('marketing') || body.includes('ads') || body.includes('campaign')) return 'smm';
+  if (body.includes('app') || body.includes('mobile') || body.includes('android') || body.includes('ios')) return 'app';
+  if (body.includes('ecommerce') || body.includes('store') || body.includes('shop') || body.includes('shopify')) return 'ecommerce';
+  return 'generic';
+}
+
+/**
+ * Identify which industry the ad is targeting based on headline + body text.
+ * Returns one of 'salon' | 'hvac' | 'real_estate' | 'generic'. Used to pick
+ * an industry-appropriate preview-site URL for the salesBot's first reply.
+ */
+function identifyAdIndustry(adText) {
+  const t = (adText || '').toLowerCase();
+  if (/\b(salon|beauty|barber|spa|nail|hair|lash|brow|makeup|stylist)\b/i.test(t)) return 'salon';
+  if (/\b(hvac|heating|cooling|ac repair|air conditioning|plumb|plumber|electric(?:al|ian)?|roof(?:ing|er)?|locksmith|garage door|pest control|tree service|water damage|appliance repair)\b/i.test(t)) return 'hvac';
+  if (/\b(real(?:[ -]?estate)?|realtor|realty|listing|property|properties|broker|brokerage|home(?:s)? for sale|house hunt)\b/i.test(t)) return 'real_estate';
+  return 'generic';
+}
+
+// Import handlers
+const { handleWelcome } = require('./handlers/welcome');
+const { handleServiceSelection } = require('./handlers/serviceSelection');
+const { handleSeoAudit } = require('./handlers/seoAudit');
+const { handleWebDev, handleGenerationFailed, PAID_CLAIM_RX, questionForState, dynamicPhrase } = require('./handlers/webDev');
+const { handleAppDev } = require('./handlers/appDev');
+const { handleMarketing } = require('./handlers/marketing');
+const { handleGeneralChat } = require('./handlers/generalChat');
+const { handleScheduling } = require('./handlers/scheduling');
+const { handleSalesBot, getSampleScreenshotUrl } = require('./handlers/salesBot');
+const { handleInformativeBot } = require('./handlers/informativeBot');
+const { handleChatbotService } = require('./handlers/chatbotService');
+const { handleCustomDomain } = require('./handlers/customDomain');
+const { handleAdGeneration } = require('./handlers/adGeneration');
+const { handleLogoGeneration } = require('./handlers/logoGeneration');
+const { tryHandleSalonOwnerCommand } = require('./handlers/salonOwnerCommands');
+
+// Map states to their handler functions
+const STATE_HANDLERS = {
+  [STATES.WELCOME]: handleWelcome,
+  [STATES.SERVICE_SELECTION]: handleServiceSelection,
+
+  // SEO flow
+  [STATES.SEO_COLLECT_URL]: handleSeoAudit,
+  [STATES.SEO_ANALYZING]: handleSeoAudit,
+  [STATES.SEO_RESULTS]: handleSeoAudit,
+  [STATES.SEO_FOLLOW_UP]: handleSeoAudit,
+
+  // Web Dev flow
+  [STATES.WEB_COLLECT_NAME]: handleWebDev,
+  [STATES.WEB_COLLECT_EMAIL]: handleWebDev,
+  [STATES.WEB_COLLECT_INDUSTRY]: handleWebDev,
+  [STATES.WEB_COLLECT_AREAS]: handleWebDev,
+  [STATES.WEB_COLLECT_AGENT_PROFILE]: handleWebDev,
+  [STATES.WEB_COLLECT_LISTINGS_CURRENCY]: handleWebDev,
+  [STATES.WEB_COLLECT_LISTINGS_ASK]: handleWebDev,
+  [STATES.WEB_COLLECT_LISTINGS_DETAILS]: handleWebDev,
+  [STATES.WEB_COLLECT_LISTINGS_PHOTOS]: handleWebDev,
+  [STATES.WEB_COLLECT_SERVICES]: handleWebDev,
+  [STATES.WEB_COLLECT_COLORS]: handleWebDev,
+  [STATES.WEB_COLLECT_LOGO]: handleWebDev,
+  [STATES.WEB_COLLECT_CONTACT]: handleWebDev,
+  [STATES.SALON_CURRENCY]: handleWebDev,
+  [STATES.SALON_BOOKING_TOOL]: handleWebDev,
+  [STATES.SALON_HOURS]: handleWebDev,
+  [STATES.SALON_SERVICE_DURATIONS]: handleWebDev,
+  [STATES.WEB_AWAITING_FORM]: handleWebDev,
+  [STATES.WEB_COLLECT_PORTFOLIO_NICHE]: handleWebDev,
+  [STATES.WEB_COLLECT_PORTFOLIO_SKILLS]: handleWebDev,
+  [STATES.WEB_COLLECT_PORTFOLIO_PROFILE]: handleWebDev,
+  [STATES.WEB_COLLECT_ABOUT]: handleWebDev,
+  [STATES.WEB_COLLECT_PROJECTS_ASK]: handleWebDev,
+  [STATES.WEB_COLLECT_PROJECTS_DETAILS]: handleWebDev,
+  [STATES.WEB_COLLECT_PROJECTS_PHOTOS]: handleWebDev,
+  [STATES.WEB_DOMAIN_CHOICE]: handleWebDev,
+  [STATES.WEB_DOMAIN_OWN_INPUT]: handleWebDev,
+  [STATES.WEB_DOMAIN_OWN_REGISTRAR]: handleWebDev,
+  [STATES.WEB_DOMAIN_SEARCH]: handleWebDev,
+  [STATES.WEB_DOMAIN_LATE_SEARCH]: handleWebDev,
+  [STATES.WEB_CONFIRM]: handleWebDev,
+  [STATES.WEB_GENERATING]: handleWebDev,
+  [STATES.WEB_GENERATION_FAILED]: handleGenerationFailed,
+  [STATES.WEB_PREVIEW]: handleWebDev,
+  [STATES.WEB_REVISIONS]: handleWebDev,
+
+  // Custom domain flow
+  [STATES.DOMAIN_OFFER]: handleCustomDomain,
+  [STATES.DOMAIN_SEARCH]: handleCustomDomain,
+  [STATES.DOMAIN_PURCHASE_WAIT]: handleCustomDomain,
+  [STATES.DOMAIN_DNS_GUIDE]: handleCustomDomain,
+  [STATES.DOMAIN_VERIFY]: handleCustomDomain,
+
+  // App Dev flow
+  [STATES.APP_COLLECT_REQUIREMENTS]: handleAppDev,
+  [STATES.APP_PROPOSAL]: handleAppDev,
+  [STATES.APP_FOLLOW_UP]: handleAppDev,
+
+  // Marketing flow
+  [STATES.MARKETING_COLLECT_DETAILS]: handleMarketing,
+  [STATES.MARKETING_STRATEGY]: handleMarketing,
+  [STATES.MARKETING_FOLLOW_UP]: handleMarketing,
+
+  // General
+  [STATES.GENERAL_CHAT]: handleGeneralChat,
+
+  // Informative / FAQ bot
+  [STATES.INFORMATIVE_CHAT]: handleInformativeBot,
+
+  // Sales bot (Bytes Platform v2)
+  [STATES.SALES_CHAT]: handleSalesBot,
+
+  // Meeting scheduling flow
+  [STATES.SCHEDULE_COLLECT_DATE]: handleScheduling,
+  [STATES.SCHEDULE_COLLECT_TIME]: handleScheduling,
+  [STATES.SCHEDULE_CONFIRM]: handleScheduling,
+
+  // AI Chatbot SaaS flow
+  [STATES.CB_COLLECT_NAME]: handleChatbotService,
+  [STATES.CB_COLLECT_INDUSTRY]: handleChatbotService,
+  [STATES.CB_COLLECT_FAQS]: handleChatbotService,
+  [STATES.CB_COLLECT_SERVICES]: handleChatbotService,
+  [STATES.CB_COLLECT_HOURS]: handleChatbotService,
+  [STATES.CB_COLLECT_LOCATION]: handleChatbotService,
+  [STATES.CB_GENERATING]: handleChatbotService,
+  [STATES.CB_DEMO_SENT]: handleChatbotService,
+  [STATES.CB_FOLLOW_UP]: handleChatbotService,
+
+  // Marketing Ad Generation flow
+  [STATES.AD_COLLECT_BUSINESS]: handleAdGeneration,
+  [STATES.AD_COLLECT_INDUSTRY]: handleAdGeneration,
+  [STATES.AD_COLLECT_NICHE]: handleAdGeneration,
+  [STATES.AD_COLLECT_TYPE]: handleAdGeneration,
+  [STATES.AD_COLLECT_SLOGAN]: handleAdGeneration,
+  [STATES.AD_COLLECT_PRICING]: handleAdGeneration,
+  [STATES.AD_COLLECT_COLORS]: handleAdGeneration,
+  [STATES.AD_COLLECT_IMAGE]: handleAdGeneration,
+  [STATES.AD_SELECT_IDEA]: handleAdGeneration,
+  [STATES.AD_CREATING_IMAGE]: handleAdGeneration,
+  [STATES.AD_RESULTS]: handleAdGeneration,
+
+  // Logo Generation flow
+  [STATES.LOGO_COLLECT_BUSINESS]: handleLogoGeneration,
+  [STATES.LOGO_COLLECT_INDUSTRY]: handleLogoGeneration,
+  [STATES.LOGO_COLLECT_DESCRIPTION]: handleLogoGeneration,
+  [STATES.LOGO_COLLECT_STYLE]: handleLogoGeneration,
+  [STATES.LOGO_COLLECT_COLORS]: handleLogoGeneration,
+  [STATES.LOGO_COLLECT_SYMBOL]: handleLogoGeneration,
+  [STATES.LOGO_COLLECT_BACKGROUND]: handleLogoGeneration,
+  [STATES.LOGO_SELECT_IDEA]: handleLogoGeneration,
+  [STATES.LOGO_CREATING_IMAGE]: handleLogoGeneration,
+  [STATES.LOGO_RESULTS]: handleLogoGeneration,
+};
+
+// States that collect free-text input — the intent classifier runs for
+// these so "skip this, do a logo" / "forget it, make a chatbot" / etc.
+// can flow-switch out mid-collection. Excluded: button-driven states
+// (the interactive reply matcher handles those separately), transient
+// system states (*_GENERATING / *_ANALYZING), and WEB_CONFIRM which
+// has its own dedicated flow-switch intercept in handleConfirm.
+const COLLECTION_STATES = new Set([
+  STATES.WEB_COLLECT_NAME,
+  STATES.WEB_COLLECT_EMAIL,
+  STATES.WEB_COLLECT_INDUSTRY,
+  STATES.WEB_COLLECT_AREAS,
+  STATES.WEB_COLLECT_AGENT_PROFILE,
+  STATES.WEB_COLLECT_LISTINGS_CURRENCY,
+  STATES.WEB_COLLECT_LISTINGS_ASK,
+  STATES.WEB_COLLECT_LISTINGS_DETAILS,
+  STATES.WEB_COLLECT_LISTINGS_PHOTOS,
+  STATES.WEB_COLLECT_SERVICES,
+  STATES.WEB_COLLECT_LOGO,
+  STATES.WEB_COLLECT_CONTACT,
+  STATES.WEB_REVISIONS,
+  // Salon sub-flow collection states
+  STATES.SALON_BOOKING_TOOL,
+  STATES.SALON_HOURS,
+  STATES.SALON_SERVICE_DURATIONS,
+  // Services-form awaiting state (user filling out web form)
+  STATES.WEB_AWAITING_FORM,
+  // Portfolio sub-flow collection states
+  STATES.WEB_COLLECT_PORTFOLIO_NICHE,
+  STATES.WEB_COLLECT_PORTFOLIO_SKILLS,
+  STATES.WEB_COLLECT_PORTFOLIO_PROFILE,
+  STATES.WEB_COLLECT_ABOUT,
+  STATES.WEB_COLLECT_PROJECTS_ASK,
+  STATES.WEB_COLLECT_PROJECTS_DETAILS,
+  STATES.WEB_COLLECT_PROJECTS_PHOTOS,
+  // SEO post-audit chat
+  STATES.SEO_COLLECT_URL,
+  STATES.SEO_FOLLOW_UP,
+  STATES.APP_COLLECT_REQUIREMENTS,
+  STATES.APP_FOLLOW_UP,
+  STATES.MARKETING_COLLECT_DETAILS,
+  STATES.MARKETING_FOLLOW_UP,
+  STATES.SCHEDULE_COLLECT_DATE,
+  STATES.SCHEDULE_COLLECT_TIME,
+  STATES.CB_COLLECT_NAME,
+  STATES.CB_COLLECT_INDUSTRY,
+  STATES.CB_COLLECT_FAQS,
+  STATES.CB_COLLECT_SERVICES,
+  STATES.CB_COLLECT_HOURS,
+  STATES.CB_COLLECT_LOCATION,
+  STATES.CB_FOLLOW_UP,
+  // Ad generation text-collection states
+  STATES.AD_COLLECT_BUSINESS,
+  STATES.AD_COLLECT_INDUSTRY,
+  STATES.AD_COLLECT_NICHE,
+  STATES.AD_COLLECT_SLOGAN,
+  STATES.AD_COLLECT_PRICING,
+  STATES.AD_COLLECT_COLORS,
+  // Logo generation text-collection states
+  STATES.LOGO_COLLECT_BUSINESS,
+  STATES.LOGO_COLLECT_INDUSTRY,
+  STATES.LOGO_COLLECT_DESCRIPTION,
+  STATES.LOGO_COLLECT_COLORS,
+  STATES.LOGO_COLLECT_SYMBOL,
+]);
+
+// Human-readable description of what the bot was asking in each state
+const STATE_QUESTION = {
+  [STATES.WEB_COLLECT_NAME]: 'What is your business name?',
+  [STATES.WEB_COLLECT_EMAIL]: "What's your email address? (or reply skip)",
+  [STATES.WEB_COLLECT_INDUSTRY]: 'What industry are you in?',
+  [STATES.WEB_COLLECT_AREAS]: 'Which city are you based in, and which areas do you serve?',
+  [STATES.WEB_COLLECT_AGENT_PROFILE]: 'Tell me your brokerage, years in real estate, and any designations (or just skip).',
+  [STATES.WEB_COLLECT_LISTINGS_ASK]: 'Do you have any listings to showcase? (yes / skip)',
+  [STATES.WEB_COLLECT_LISTINGS_DETAILS]: 'Send your listing details in natural language, or say done.',
+  [STATES.WEB_COLLECT_LISTINGS_PHOTOS]: 'Send a listing photo, or say done / skip for stock photos.',
+  [STATES.WEB_COLLECT_SERVICES]: 'What services or products do you offer?',
+  [STATES.WEB_COLLECT_LOGO]: "Do you have a logo? (send an image or type 'skip')",
+  [STATES.WEB_COLLECT_CONTACT]: 'Please share your contact details (email, phone, address)',
+  [STATES.WEB_REVISIONS]: "Tell me what you'd like to change on the site, or reply approve to move on.",
+  [STATES.SALON_BOOKING_TOOL]: 'Do you use a booking tool (like Fresha, Vagaro) or want one built in?',
+  [STATES.SALON_HOURS]: 'What are your opening hours for each day of the week?',
+  [STATES.SALON_SERVICE_DURATIONS]: 'How long does each service take, and what does it cost?',
+  [STATES.WEB_COLLECT_PORTFOLIO_NICHE]: 'What kind of work do you do — photography, design, development, or writing?',
+  [STATES.WEB_COLLECT_PORTFOLIO_SKILLS]: 'List your main skills & tools (comma-separated), or skip.',
+  [STATES.WEB_COLLECT_PORTFOLIO_PROFILE]: "Share profile links (GitHub, LinkedIn, Behance…) and what you're building now, or skip.",
+  [STATES.WEB_COLLECT_ABOUT]: 'Write a short bio for your portfolio hero, or skip to auto-generate.',
+  [STATES.WEB_COLLECT_PROJECTS_ASK]: 'Want to feature your projects, or skip and use placeholder cards?',
+  [STATES.WEB_COLLECT_PROJECTS_DETAILS]: 'Send a project (title, role, year, link), or say done.',
+  [STATES.WEB_COLLECT_PROJECTS_PHOTOS]: 'Send a project cover image, or say done / skip for stock visuals.',
+  [STATES.SEO_COLLECT_URL]: 'Please send your website URL to analyze',
+  [STATES.SEO_FOLLOW_UP]: "Any questions about the audit — or want help fixing what we found?",
+  [STATES.APP_COLLECT_REQUIREMENTS]: 'Tell me about your app idea - what does it do and who is it for?',
+  [STATES.APP_FOLLOW_UP]: 'Any questions on the app proposal, or ready to move forward?',
+  [STATES.MARKETING_COLLECT_DETAILS]: 'Tell me about your business and your marketing goals',
+  [STATES.MARKETING_FOLLOW_UP]: 'Any questions on the marketing plan, or ready to move forward?',
+  [STATES.SCHEDULE_COLLECT_DATE]: 'What date works best for you for the meeting?',
+  [STATES.SCHEDULE_COLLECT_TIME]: 'What time works best for you for the meeting?',
+  [STATES.CB_COLLECT_NAME]: 'What is your business name?',
+  [STATES.CB_COLLECT_INDUSTRY]: 'What industry are you in?',
+  [STATES.CB_COLLECT_FAQS]: 'What are the top questions your customers ask? (type "done" when finished)',
+  [STATES.CB_COLLECT_SERVICES]: 'What services do you offer with their prices?',
+  [STATES.CB_COLLECT_HOURS]: 'What are your business hours?',
+  [STATES.CB_COLLECT_LOCATION]: 'What is your business address/location?',
+  [STATES.CB_FOLLOW_UP]: 'Any questions about the chatbot — or ready to start your free trial?',
+  // Ad generation
+  [STATES.AD_COLLECT_BUSINESS]: 'What is your business name?',
+  [STATES.AD_COLLECT_INDUSTRY]: 'What industry are you in? (e.g. Food & Beverage, Fashion, Tech)',
+  [STATES.AD_COLLECT_NICHE]: 'What product or service is this ad for?',
+  [STATES.AD_COLLECT_SLOGAN]: 'Type your brand slogan or tagline, or skip',
+  [STATES.AD_COLLECT_PRICING]: 'Any pricing info to display on the ad? (or skip)',
+  [STATES.AD_COLLECT_COLORS]: 'What are your brand colors? (or skip)',
+  // Logo generation
+  [STATES.LOGO_COLLECT_BUSINESS]: 'What is your business name? (this will appear on the logo)',
+  [STATES.LOGO_COLLECT_INDUSTRY]: 'What industry are you in?',
+  [STATES.LOGO_COLLECT_DESCRIPTION]: 'In one sentence, what does your business do?',
+  [STATES.LOGO_COLLECT_COLORS]: 'What are your brand colors? (or skip)',
+  [STATES.LOGO_COLLECT_SYMBOL]: 'Any symbol idea for your logo? (e.g. "a bee" or skip)',
+};
+
+// Regex fast-path for unambiguous sales objections. Hits the common 80% of
+// "i don't want this / it's too much / let me think" phrasings without an
+// LLM call. Everything else falls through to the LLM check in
+// isSalesObjection below.
+const SALES_OBJECTION_RX = /\b(too expensive|too (much|pricey|costly)|can'?t afford|out of (my )?budget|over (my )?budget|not worth it|not sure (it'?s )?worth|don'?t think it'?s worth|let me think( about it)?|(i'?ll|i will) think about it|get back to (you|u)( later)?|circle back|maybe later|not (right )?now|not the right time|look (at|for) (other |another )?(alternatives?|options?)|look elsewhere|shop around|found (something|one) cheaper|cheaper (option|alternative)|(i'?ll|i will) (just )?use wix|(i'?ll|i will) (just )?use squarespace|chatgpt (can|could|will) (do|build)|just use (ai|chatgpt)|burn(ed|t)? by agencies|scammed before)\b/i;
+
+/**
+ * Cheap detector for sales-chat objections. Tries regex first (no LLM cost),
+ * falls back to a short LLM classifier for ambiguous cases. Designed to be
+ * fast — this runs before every sales-chat turn so latency matters.
+ *
+ * Returns true when the message is clearly a pushback on buying/committing
+ * (price, stalling, alternatives, trust). Returns false for questions,
+ * agreement, info-sharing, or anything that the sales bot should handle
+ * normally.
+ */
+async function isSalesObjection(text, userId) {
+  const t = String(text || '').trim();
+  if (!t || t.length < 4) return false;
+  if (SALES_OBJECTION_RX.test(t)) return true;
+
+  // Short messages without regex hit are almost never objections — skip the
+  // LLM call. This keeps latency low for the common "ok", "yes", "what
+  // about X?" replies that make up most of a sales chat.
+  if (t.length < 30) return false;
+
+  try {
+    const prompt = `Classify the user's message. Return ONLY JSON: {"isObjection": true|false}.
+
+An objection is pushback on buying or continuing — price concerns ("too expensive", "over my budget"), stalling ("let me think", "get back to you"), trust doubts ("not sure it's worth it"), competitor mentions ("i'll use wix", "chatgpt could do this"), or rejections ("not interested").
+
+NOT objections: asking a question, providing business info, agreeing, specifying preferences, small talk. When unsure, return false.`;
+    const raw = await generateResponse(
+      prompt,
+      [{ role: 'user', content: t.slice(0, 500) }],
+      { userId, operation: 'sales_objection_check', timeoutMs: 15_000, model: 'gpt-5.4-nano' }
+    );
+    const m = String(raw || '').match(/\{[\s\S]*?\}/);
+    if (!m) return false;
+    const parsed = JSON.parse(m[0]);
+    return !!parsed.isObjection;
+  } catch {
+    return false; // on any failure, don't intercept — let the sales bot handle it
+  }
+}
+
+/**
+ * Classify whether a free-text message is answering the current question
+ * or doing something else (asking a question, wanting the menu, exiting).
+ * Returns: "answer" | "question" | "menu" | "exit"
+ */
+/**
+ * After we decline a user's business for NSFW-legal reasons (cannabis,
+ * gambling, adult entertainment), we persist metadata.scopeDeclinedAt.
+ * This tiny LLM check decides whether a follow-up message is pushing
+ * back on the same declined topic (→ re-decline) or pivoting to a
+ * different project (→ clear the flag, let normal flow run).
+ *
+ * Returns true when the user is clearly switching topics. Returns
+ * false on any ambiguity so we err on the safe side and re-decline.
+ */
+async function isPivotAwayFromDeclinedScope(text, declinedReason, userId) {
+  const t = String(text || '').trim();
+  if (!t) return false;
+  try {
+    const prompt = `We previously declined to build a website / marketing for a user whose business is "${declinedReason}" (outside our service scope). They just sent a new message. Is this message:
+
+- "pivot": clearly switching to a DIFFERENT business or project (e.g. "actually, I also run a bakery", "what about my other company", "different topic, I need a logo for X", "forget that, new idea"), OR
+- "continue": still pushing back on the decline, asking why, trying to reconsider, or saying anything that could still be about the declined business ("you can't?", "why not?", "but it's legal here", "please", "try anyway", a generic question like "really?").
+
+When in doubt, return "continue" — we only switch to "pivot" when there's a clear mention of a different business or topic.
+
+User message: "${t.replace(/"/g, '\\"').slice(0, 400)}"
+
+Return ONLY one word: pivot or continue.`;
+    const resp = await generateResponse(
+      prompt,
+      [{ role: 'user', content: 'Classify.' }],
+      { userId, operation: 'scope_decline_pivot', timeoutMs: 8_000, model: 'gpt-5.4-nano' }
+    );
+    const cleaned = String(resp || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+    return cleaned === 'pivot';
+  } catch (err) {
+    logger.warn(`[ABUSE] isPivotAwayFromDeclinedScope failed: ${err.message}`);
+    return false; // safe default: re-decline
+  }
+}
+
+/**
+ * Inner processor: acquires the per-user lock, pins channel context, runs
+ * _routeMessage with one retry if the first attempt threw before sending
+ * anything. Called via routeMessage directly for non-text / button / slash
+ * messages, and via the message buffer for debounced text batches.
+ */
+function _processTurn(message) {
+  const channel = message.channel || 'whatsapp';
+  return withUserLock(message.from || 'anon', () =>
+    // Pin the inbound phone_number_id into the async context so every
+    // sendTextMessage / sendInteractiveButtons / etc. inside this turn replies
+    // from the same business number the user messaged. The context also
+    // tracks a sendCount that gates the retry logic below.
+    runWithContext({ channel, phoneNumberId: message.phoneNumberId || null }, async () => {
+    const { getSendCount } = require('../messages/channelContext');
+
+    // First attempt.
+    try {
+      return await _routeMessage(message);
+    } catch (err) {
+      const alreadyReplied = getSendCount() > 0;
+      if (alreadyReplied) {
+        // The turn already delivered at least one reply to the user before
+        // throwing. Retrying would duplicate that reply — much worse than
+        // just logging and moving on. This is the common case when a post-
+        // reply step (metadata update, summary refresh, trigger dispatch)
+        // throws but the user got what they needed.
+        logger.warn(`[ROUTER] First attempt failed AFTER ${getSendCount()} reply(ies) for ${message.from}: ${err.message}. NOT retrying (would duplicate).`);
+        return;
+      }
+      logger.warn(`[ROUTER] First attempt failed for ${message.from} with no reply sent: ${err.message}. Retrying once.`, {
+        stack: err.stack?.split('\n').slice(0, 5).join('\n'),
+        errorName: err.name,
+        errorCode: err.code,
+      });
+      await new Promise((r) => setTimeout(r, 600));
+    }
+
+    // Second attempt — only reached when the first attempt threw BEFORE
+    // sending anything. Transient timeouts / network blips fall into this
+    // bucket and usually succeed on retry.
+    try {
+      return await _routeMessage(message);
+    } catch (err) {
+      logger.error(`[ROUTER] Retry also failed for ${message.from}:`, {
+        message: err.message,
+        stack: err.stack?.split('\n').slice(0, 5).join('\n'),
+      });
+      // Only now, after two honest attempts, surface a user-visible nudge.
+      try {
+        await sendTextMessage(
+          message.from,
+          "Hmm, something glitched on my end. Try sending that again in a sec?"
+        );
+      } catch {
+        // If even the nudge fails, we're truly stuck — just log.
+      }
+    }
+    })
+  );
+}
+
+/**
+ * Main message router. Called for every incoming message (WhatsApp, Messenger, Instagram).
+ *
+ * Dedup runs up front so redelivered messages never enter the buffer or the
+ * lock chain. Plain text goes through the 1s debounce buffer (Phase 7) so
+ * rapid bursts merge into one turn; everything else (media, button taps,
+ * slash commands) takes the direct path and flushes any pending text first
+ * to preserve arrival order.
+ */
+async function routeMessage(message) {
+  const from = message.from || 'anon';
+
+  // Dedup: WhatsApp occasionally redelivers the same inbound messageId.
+  // Checking here (before the buffer and lock) means a dup can never ride
+  // into a merged batch and accidentally re-trigger a reply.
+  if (seenRecently(from, message.messageId)) {
+    logger.warn(`[ROUTER] Duplicate delivery ignored: from=${from} messageId=${message.messageId}`);
+    return;
+  }
+
+  if (messageBuffer.isBufferable(message)) {
+    return messageBuffer.enqueue(message, _processTurn);
+  }
+
+  // Non-text / button / slash: drain any pending text for this user first
+  // so the user-visible order matches the send order (typed "hi" then
+  // tapped a button → "hi" gets a reply, then the button tap processes).
+  await messageBuffer.flushPendingWith(from, _processTurn);
+  return _processTurn(message);
+}
+
+async function _routeMessage(message) {
+  const { from, text, messageId } = message;
+  const channel = message.channel || 'whatsapp';
+
+  // Dedup already ran in routeMessage before the buffer / lock — don't
+  // re-check here. seenRecently is stateful and a second call for the same
+  // id would mis-flag this turn as a duplicate.
+
+  // Track the message ID so typing indicators work for all outgoing messages
+  setLastMessageId(from, messageId);
+
+  // Mark message as read — fire-and-forget. The blue ticks are cosmetic;
+  // gating processing on this WhatsApp API roundtrip cost ~300-700ms per
+  // turn for no reply-time benefit. The .catch swallows errors so an
+  // unhandled rejection can't bubble up if the API hiccups.
+  markAsRead(messageId).catch(() => {});
+
+  // Save original message type before audio transcription overwrites it
+  const originalType = message.type;
+
+  // Download media (image/audio) for storage in DB so admin can view it
+  let mediaData = null;
+  let mediaMime = null;
+  if ((message.type === 'image' || message.type === 'sticker' || message.type === 'audio') && message.mediaId) {
+    try {
+      const { downloadMedia } = require('../messages/sender');
+      const media = await downloadMedia(message.mediaId);
+      if (media?.buffer) {
+        mediaData = `data:${media.mimeType};base64,${media.buffer.toString('base64')}`;
+        mediaMime = media.mimeType;
+      }
+    } catch (err) {
+      logger.error('Media download failed:', err.message);
+    }
+  }
+
+  // Documents (PDF/DOCX/…) — download and stash in storage so the admin
+  // conversation view can open the file. Images/audio above are stored inline
+  // as base64; documents can be large, so they get a storage URL instead.
+  if (message.type === 'document' && message.mediaId) {
+    try {
+      const { downloadMedia } = require('../messages/sender');
+      const media = await downloadMedia(message.mediaId);
+      if (media?.buffer) {
+        const { uploadInboundDocument } = require('../messages/documentStore');
+        const url = await uploadInboundDocument(media.buffer, media.mimeType || message.mimeType, message.filename);
+        if (url) {
+          mediaData = url;
+          mediaMime = media.mimeType || message.mimeType || 'application/octet-stream';
+        }
+      }
+    } catch (err) {
+      logger.warn(`[MEDIA] document store failed: ${err.message}`);
+    }
+  }
+
+  // Transcribe audio messages to text
+  if (message.type === 'audio' && (message.mediaId || message.mediaUrl)) {
+    try {
+      const mediaRef = message.mediaId || message.mediaUrl;
+      const transcript = await transcribeAudio(mediaRef, message.mimeType);
+      if (transcript) {
+        message.text = transcript;
+        message.type = 'text';
+        logger.info(`Audio from ${from} transcribed: "${transcript.slice(0, 100)}"`);
+      }
+    } catch (error) {
+      logger.error('Audio transcription failed:', error);
+      const audioErrUser = await findOrCreateUser(from, channel, message.phoneNumberId || null).catch(() => null);
+      const audioErrMsg = audioErrUser
+        ? await localize("I couldn't process that voice message - could you type it out instead?", audioErrUser, '')
+        : "I couldn't process that voice message - could you type it out instead?";
+      await sendTextMessage(from, audioErrMsg);
+      return;
+    }
+  }
+
+  // Find or create user. Identity is per (phone, channel, inbound business
+  // number) so a customer texting two of our WhatsApp numbers gets two
+  // independent sessions.
+  const user = await findOrCreateUser(from, channel, message.phoneNumberId || null);
+  // Tell the sender facade who we're talking to so every outbound message
+  // (text, buttons, lists, docs, images) auto-logs against this user. Without
+  // this, ~50% of bot replies don't show up in the admin panel chat history
+  // because handlers used to have to call logMessage manually after each send.
+  setUserId(user.id);
+
+  // Phase 1 observability: stamp this turn with a fresh UUID so every
+  // classifier decision recorded inside it (undo / intent / correction
+  // / side-channel / sales bot speech&topic / industry / services) gets
+  // grouped together. Admin "🔍 Trace" panel reads classifier_decisions
+  // by user_id + turn_id to render the per-turn decision graph.
+  setTurnId(randomUUID());
+
+  // Backfill display name on EVERY turn, not just on the WELCOME state.
+  // Messenger / Instagram resolve the name via Graph API in the route
+  // before this handler runs (see messengerRoutes.js); WhatsApp gets it
+  // from the contacts.profile.name field on the webhook itself. The old
+  // welcome-handler-only path missed Messenger users who got created
+  // pre-fix and were already past WELCOME — they'd keep showing as
+  // their numeric PSID forever even after the Graph API fetch resolved
+  // their real name. Updating here means a user's next inbound message
+  // is enough to populate user.name so the admin dashboard, lead
+  // summaries, and recap context all stop showing the raw ID.
+  if (message.contactName && !user.name) {
+    try {
+      const { updateUser } = require('../db/users');
+      await updateUser(user.id, { name: message.contactName });
+      user.name = message.contactName;
+    } catch (err) {
+      logger.warn(`[USER] Failed to backfill name for ${user.id}: ${err.message}`);
+    }
+  }
+
+  // ── Quoted-reply resolution ────────────────────────────────────────────
+  // If the user used WhatsApp/Messenger's "Reply" affordance, parser sets
+  // message.replyTo = { id }. Look up that id in our conversations table
+  // and inline the quoted text into message.text — surrounded by a marker
+  // so the LLM (and downstream classifiers) see exactly what the user is
+  // pointing at. Without this the bot only gets the standalone reply
+  // ("yes that one", "change it to 4pm") and has no anchor.
+  if (message.replyTo?.id) {
+    try {
+      const { findMessageByPlatformId } = require('../db/conversations');
+      const quoted = await findMessageByPlatformId(user.id, message.replyTo.id);
+      if (quoted?.message_text) {
+        // Store quote context as a SEPARATE field on the message — never
+        // splice it into message.text. Earlier we prepended a "[Replying
+        // to bot's earlier message: ...]" marker which downstream LLM
+        // extractors (contact, areas, services) faithfully treated as
+        // user-supplied data. That bled the bot's own quote into things
+        // like the address field, where it then rendered on the live
+        // generated site. Now: message.text stays pristine; consumers
+        // that want the quote read message.quoted explicitly.
+        message.quoted = {
+          text: quoted.message_text,
+          role: quoted.role,
+          speaker: quoted.role === 'assistant' ? 'bot' : 'user',
+          snippet: String(quoted.message_text).slice(0, 400),
+        };
+        logger.info('[REPLY-CTX] Resolved quoted message', {
+          userId: user.id,
+          quotedRole: quoted.role,
+          quotedSnippet: message.quoted.snippet.slice(0, 80),
+        });
+      }
+    } catch (err) {
+      logger.debug(`[REPLY-CTX] Lookup failed: ${err.message}`);
+    }
+  }
+
+  // ── Feedback button intercepts ─────────────────────────────────────────
+  // Must run BEFORE abuse detection and normal intent routing — these are
+  // user responses to prompts WE sent; they're not abuse, not flow-switch
+  // intent, and they shouldn't be classified by other interceptors.
+  try {
+    const {
+      handleFeedbackButton,
+      handlePendingComment,
+      handleHandoffButton,
+      isFeedbackTrigger,
+      startManualFeedback,
+    } = require('../feedback/feedback');
+
+    // Post-delivery rating buttons (🔥/👍/🤔)
+    const fb = await handleFeedbackButton(user, message);
+    if (fb?.handled) return;
+
+    // Human-handoff offer buttons (Get a human / Keep trying)
+    const ho = await handleHandoffButton(user, message);
+    if (ho?.handled) return;
+
+    // The existing humanTakeover gate further down (around line ~860)
+    // is what silences subsequent inbound turns once the abuse detector
+    // has flipped the user. No separate short-circuit needed here —
+    // applyHandover() sets humanTakeover:true, one canned reply goes
+    // out at flag time, and every inbound turn after that falls through
+    // to the standard takeover drop with zero LLM spend.
+
+    // Free-text reply to "what happened?" after the user tapped
+    // Had issues on a previous delivery prompt. Runs BEFORE the
+    // manual-feedback trigger so a user typing "feedback" mid-pending-
+    // comment lands as the comment text rather than starting a new
+    // feedback session.
+    const pc = await handlePendingComment(user, message);
+    if (pc?.handled) return;
+
+    // User-typed "feedback" / "i have feedback" / "/feedback" — entry
+    // point so customers can leave feedback any time, not just on the
+    // post-delivery 3-button row. Detected on the WHOLE message (regex
+    // anchored ^...$) so a sentence containing the word "feedback"
+    // doesn't trip it. Skip when the user is mid-collection of a
+    // SPECIFIC field (state expects a typed answer like a phone number
+    // or a domain name) so they can still type "feedback" as a literal
+    // value if some weird flow needs it — those states already gate
+    // free text. Today this is purely safe because the trigger requires
+    // an exact phrase match.
+    if (isFeedbackTrigger(message?.text || '')) {
+      const mf = await startManualFeedback(user);
+      if (mf?.handled) return;
+    }
+  } catch (err) {
+    logger.warn(`[FEEDBACK] Router hook failed: ${err.message}`);
+  }
+
+  // ── Language cache-once ────────────────────────────────────────────────
+  // The salesBot LLM detects + replies in the user's language via its
+  // system prompt, but that detection lives inside the LLM and is never
+  // persisted. Background jobs (exploratory followups, 22h discount,
+  // meeting reminders) call resolveLanguage(user, null) hours later — at
+  // which point a single recent code-switched message ("Silly") can tip
+  // the verdict to English even for a Portuguese-speaking user. Caching
+  // here once, on the first text-bearing turn of every user, costs one
+  // LLM detection call per new non-English user, then never again.
+  //
+  // Gated on:
+  //   - text actually present (non-empty user message we can detect from)
+  //   - no cached preferredLanguage yet (so this fires at most once per user)
+  //   - text isn't just a slash-command or button-id substitute
+  const firstTurnText = (message.text || '').trim();
+  if (
+    firstTurnText &&
+    firstTurnText.length >= 2 &&
+    !firstTurnText.startsWith('/') &&
+    !message.buttonId &&
+    !message.listId &&
+    !user.metadata?.preferredLanguage
+  ) {
+    try {
+      const { resolveLanguage } = require('../utils/localizer');
+      await resolveLanguage(user, firstTurnText);
+      // resolveLanguage writes to user.metadata.preferredLanguage internally;
+      // no additional work needed here.
+    } catch (err) {
+      logger.warn(`[ROUTER] resolveLanguage on first turn failed: ${err.message}`);
+    }
+  }
+  // Stash the (possibly just-detected) language on the per-turn async-context
+  // store so sender-side helpers (e.g. the "Or type 1 or 2" hint generator
+  // in interactiveReplyMatcher.js) can localize without plumbing a user
+  // object through every send call.
+  try {
+    const { setPreferredLanguage, setVoiceMode } = require('../messages/channelContext');
+    setPreferredLanguage(user.metadata?.preferredLanguage || null);
+    // Mirror the sticky voice-reply preference onto the per-turn context so
+    // the sender speaks every plain-text reply this turn. The interceptor
+    // below can flip this live when the user toggles it.
+    setVoiceMode(!!user.metadata?.voiceReplies);
+  } catch { /* defensive — never break the turn for a context stash */ }
+
+  // ── Interactive reply matcher (Phase 10) ───────────────────────────────
+  // If the last bot message to this user had buttons/list and this inbound
+  // is plain text that looks like a pick ("2", "second one", "website",
+  // etc.), convert it into a real buttonId so downstream handlers treat
+  // it as a tap. Users on desktop, older clients, or who just prefer
+  // typing never have to phrase things exactly right. Runs BEFORE the
+  // recap check so a matched pick suppresses the recap.
+  const rawText = (message.text || '').trim();
+  const alreadyTapped = !!(message.buttonId || message.listId);
+  if (message.type === 'text' && rawText && !alreadyTapped && !rawText.startsWith('/')) {
+    try {
+      const { matchReply } = require('../messages/interactiveReplyMatcher');
+      const result = await matchReply(user.phone_number, rawText, { userId: user.id });
+      if (result && result.kind === 'match') {
+        logger.info(`[INTERACTIVE] Matched "${rawText}" → buttonId=${result.item.id} (title="${result.item.title}") for ${from}`);
+        message.buttonId = result.item.id;
+        // Replace the visible text with the button's title so conversation
+        // logs and any LLM context downstream read naturally ("SEO Audit"
+        // instead of "2"). Original digit is still recoverable from logs.
+        message.text = result.item.title;
+      } else if (result && result.kind === 'out_of_range') {
+        // User typed a digit that doesn't correspond to any button. Give
+        // a concrete nudge rather than silently re-showing the menu.
+        // Pending stays alive so their next valid digit still matches.
+        logger.info(`[INTERACTIVE] Out-of-range digit "${rawText}" for ${from} (total=${result.total})`);
+        const nudge = `that was only ${result.total} option${result.total === 1 ? '' : 's'} — pick 1-${result.total} or tap one of the buttons above.`;
+        // sendTextMessage auto-logs via autoLogOutbound (sender.js) — no
+        // explicit logMessage needed. Calling both creates a duplicate row
+        // in the conversations table that surfaces as a visible duplicate
+        // in the admin transcript view.
+        await sendTextMessage(user.phone_number, nudge);
+        // Stop this turn here. The buttons are still visible in the
+        // chat and the user can retry; no need to run the state handler
+        // (which would re-show the whole menu).
+        return;
+      }
+      // kind 'off_topic' and 'nopending' fall through to normal handling.
+    } catch (err) {
+      logger.warn(`[INTERACTIVE] Matcher threw for ${from}: ${err.message}`);
+    }
+  }
+
+  // ── Intent classifier kickoff ──────────────────────────────────────────
+  // For free-text turns in collection states, we'll need an intent
+  // classification (answer / question / menu / exit). Kick that LLM call
+  // off NOW, in parallel with the abuse detector below. Both are cheap
+  // gpt-5.4-nano classifiers but each has its own ~700-1000ms round trip;
+  // running them sequentially was the single biggest contributor to the
+  // 5-9s reply latency. Started here, this promise also overlaps with the
+  // intermediate code (logMessage, lead temp update, recap/return-greet
+  // checks) so by the time it's actually awaited at the intent block
+  // below, it's usually already resolved. Wasted work cost: a tiny number
+  // of nano calls on turns where an early return fires before the await.
+  // Phase 3 — consolidated per-turn classifier. Replaces the previous
+  // three parallel calls (intentPromise + correctionPromise +
+  // classifyUndoOrKeep) with a SINGLE LLM call that returns a unified
+  // verdict (primary intent + optional correction payload + orthogonal
+  // flags). Same parallel-kickoff strategy as before so the verdict is
+  // usually resolved by the time we await it later. Old per-classifier
+  // call sites are skipped when this promise is set.
+  let turnClassifierPromise = null;
+  // We also gate this for the domain states the old correctionDetector
+  // covered (WEB_DOMAIN_*) — the same cross-state-correction value
+  // applies there ("wait the contact number was X" mid-domain).
+  const TURN_CLASSIFIER_DOMAIN_STATES = new Set([
+    STATES.WEB_DOMAIN_CHOICE,
+    STATES.WEB_DOMAIN_OWN_INPUT,
+    STATES.WEB_DOMAIN_OWN_REGISTRAR,
+    STATES.WEB_DOMAIN_SEARCH,
+    STATES.WEB_DOMAIN_LATE_SEARCH,
+  ]);
+  if (
+    text &&
+    !message.buttonId &&
+    !message.listId &&
+    message.type === 'text' &&
+    (COLLECTION_STATES.has(user.state) || TURN_CLASSIFIER_DOMAIN_STATES.has(user.state)) &&
+    !user.metadata?.humanTakeover
+  ) {
+    turnClassifierPromise = (async () => {
+      let recentContext = '';
+      try {
+        const { getConversationHistory } = require('../db/conversations');
+        const hist = await getConversationHistory(user.id, 6, {
+          afterTimestamp: user.metadata?.lastResetAt || null,
+        });
+        const recentAssistant = (hist || [])
+          .filter((m) => m.role === 'assistant')
+          .slice(-3);
+        if (recentAssistant.length) {
+          recentContext = recentAssistant
+            .map((m) => `Bot just said: "${String(m.message_text || '').replace(/\s+/g, ' ').slice(0, 220)}"`)
+            .join('\n');
+        }
+      } catch (err) {
+        logger.warn(`[TURN-CLASSIFIER] Recent-context fetch failed: ${err.message}`);
+      }
+      const { classifyTurnIntent } = require('./turnClassifier');
+      const undoPending = user.metadata?.undoPendingState === user.state;
+      return classifyTurnIntent({
+        text,
+        currentState: user.state,
+        currentQuestion: STATE_QUESTION[user.state] || '',
+        recentContext,
+        knownFields: user.metadata?.websiteData || {},
+        undoPending,
+        userId: user.id,
+      });
+    })().catch((err) => {
+      logger.warn(`[TURN-CLASSIFIER] Pre-classify failed: ${err.message}`);
+      return null;
+    });
+  }
+  // Legacy alias kept so the existing dispatch downstream — which
+  // historically used `intentPromise` — can still resolve to a string
+  // 'intent' value. We map verdict.primary → the same intent strings
+  // the old code expected ('answer', 'question', 'menu', 'exit',
+  // 'objection'). 'undo' / 'keep' / 'correction' / 'skip' are NEW
+  // primary values that the old intent code didn't have — they're
+  // handled by separate branches in the dispatch below.
+  let intentPromise = turnClassifierPromise
+    ? turnClassifierPromise.then((v) => {
+        if (!v) return 'answer';
+        if (v.primary === 'menu' || v.primary === 'exit' || v.primary === 'question' || v.primary === 'objection') {
+          return v.primary;
+        }
+        // 'answer' / 'skip' / 'undo' / 'keep' / 'correction' / 'unclear' all
+        // map to 'answer' for the legacy dispatch — the new branches
+        // above handle the special cases first.
+        return 'answer';
+      })
+    : null;
+
+  // ── Cross-state correction kickoff (Phase 3 — superseded) ─────────────
+  // Now sourced from turnClassifierPromise above. The unified classifier
+  // returns verdict.correction when applicable; we read that at the
+  // existing await site below instead of running a separate
+  // detectCorrection LLM call. Setting correctionPromise = null skips
+  // the old kickoff path; the await site is rewritten to pull from the
+  // turn verdict.
+  // (Phase 3) The old `correctionPromise = ... detectCorrection(...)`
+  // kickoff has been removed entirely — turnClassifierPromise above
+  // produces verdict.correction directly in the same shape
+  // applyFieldCorrection expects. The downstream correction-await site
+  // pulls from the turn verdict. Domain-state coverage (WEB_DOMAIN_*)
+  // is handled by TURN_CLASSIFIER_DOMAIN_STATES at the kickoff site.
+
+  // Redact any pasted secrets (API keys, JWTs, private-key blocks, etc.)
+  // and log the inbound message BEFORE abuse detection or any other early
+  // return. Previously this lived after the abuse detector, which meant
+  // messages flagged as abusive were never stored and disappeared from the
+  // admin transcript. Moving it here ensures every inbound turn is captured
+  // regardless of which pipeline check fires first.
+  try {
+    const { redactSecrets } = require('../utils/validators');
+    const incomingText = message.text || text || '';
+    const redaction = redactSecrets(incomingText);
+    if (redaction.redacted) {
+      logger.warn(`[SECURITY] Redacted ${redaction.types.join(',')} from inbound message for ${from}`);
+      message.text = redaction.text;
+      user._secretRedaction = { types: redaction.types };
+    }
+    await logMessage(user.id, redaction.text, 'user', originalType, messageId, mediaData, mediaMime);
+  } catch (err) {
+    logger.warn(`[SECURITY] redactSecrets failed for ${from}: ${err.message} — logging raw text`);
+    await logMessage(user.id, message.text || text || '', 'user', originalType, messageId, mediaData, mediaMime);
+  }
+
+  // ── Abuse detection (Phase 13) ─────────────────────────────────────────
+  // Before ANY greeting / recap / handler dispatch runs, classify the
+  // inbound message. Hard categories (hate / threats / phishing /
+  // hacking / illegal) get a firm decline, bot-silence via
+  // humanTakeover, and an admin email. NSFW-legal (adult / cannabis /
+  // gambling) gets a polite decline only. Gray-area intents (MLM,
+  // crypto, diet-pill dropshipping) pivot to the meeting-booking flow.
+  //
+  // Gated to skip cheaply for: button taps, slash commands, empty
+  // text, and users already in humanTakeover — no need to burn an
+  // LLM call on messages that won't produce a bot reply anyway.
+  {
+    const abuseText = (message.text || '').trim();
+    const isAbuseSlash = abuseText.startsWith('/');
+    const isAbuseInteractive = !!(message.buttonId || message.listId);
+    const alreadySilenced = !!user.metadata?.humanTakeover;
+    if (
+      message.type === 'text' &&
+      abuseText &&
+      !isAbuseSlash &&
+      !isAbuseInteractive &&
+      !alreadySilenced
+    ) {
+      try {
+        // Phase 13 follow-up: if this user was already declined for
+        // nsfw-legal scope in the last 30 min, don't let a generic
+        // pushback ("you can't do it?") slip past the classifier and
+        // re-enter the normal flow. Check whether they're pivoting to
+        // a different topic — if so, clear the flag; otherwise
+        // re-decline softly and stop processing this turn.
+        const scopeDeclinedAt = user.metadata?.scopeDeclinedAt;
+        if (scopeDeclinedAt) {
+          const sinceMs = Date.now() - new Date(scopeDeclinedAt).getTime();
+          const COOLDOWN_MS = 30 * 60 * 1000;
+          if (sinceMs < COOLDOWN_MS) {
+            const reason = user.metadata?.scopeDeclinedReason || 'that kind of business';
+            const pivoted = await isPivotAwayFromDeclinedScope(abuseText, reason, user.id);
+            if (!pivoted) {
+              const reDecline = `still not something we're able to help with for ${reason}. if there's a different project you're working on, happy to chat about that instead.`;
+              // sendTextMessage auto-logs (sender.js); avoid duplicate row.
+              await sendTextMessage(user.phone_number, reDecline);
+              logger.info(`[ABUSE] Re-declined nsfw scope (${reason}) for ${from}`);
+              return;
+            }
+            // Pivoted — clear the flag and fall through to normal routing
+            await updateUserMetadata(user.id, { scopeDeclinedAt: null, scopeDeclinedReason: null });
+            if (user.metadata) {
+              user.metadata.scopeDeclinedAt = null;
+              user.metadata.scopeDeclinedReason = null;
+            }
+            logger.info(`[ABUSE] User pivoted away from declined ${reason}, clearing flag`);
+          } else {
+            // Cooldown elapsed — clear silently.
+            await updateUserMetadata(user.id, { scopeDeclinedAt: null, scopeDeclinedReason: null });
+            if (user.metadata) {
+              user.metadata.scopeDeclinedAt = null;
+              user.metadata.scopeDeclinedReason = null;
+            }
+          }
+        }
+
+        const { classifyAbuse } = require('./abuseDetector');
+        const { handleAbuseCategory } = require('./abuseHandler');
+        const category = await classifyAbuse(abuseText, user.id);
+        if (category && category !== 'clean') {
+          const result = await handleAbuseCategory(user, message, category);
+          if (result?.handled) return;
+        }
+      } catch (err) {
+        // Never let an abuse-detector bug block a legitimate message.
+        logger.warn(`[ABUSE] Detection pipeline failed for ${from}: ${err.message}`);
+      }
+    }
+  }
+
+  // ── Document + location intercepts (Phase 14) ──────────────────────────
+  // Before state dispatch, catch non-text inbounds that handlers can't
+  // process. Location pins get reverse-geocoded and (when the user is
+  // mid-webdev) can seed primaryCity / contactAddress automatically.
+  // Documents are captured to metadata and acknowledged — admin handles
+  // content review manually.
+  //
+  // Silenced users (humanTakeover) are NOT handled here — their messages
+  // pass through to the takeover gate below and are logged without a
+  // bot reply, same as text messages.
+  const silencedForMedia = !!user.metadata?.humanTakeover;
+  if (!silencedForMedia && message.type === 'location') {
+    try {
+      const { handleLocation } = require('./handlers/locationHandler');
+      const result = await handleLocation(user, message);
+      if (result?.handled) return;
+    } catch (err) {
+      logger.error(`[LOCATION] Handler failed for ${from}: ${err.message}`);
+    }
+  }
+  // Exception: when the user is at the logo-collection step, a document
+  // upload is almost always them sending the logo from the file picker
+  // (PNGs come through as type:document, mime:image/png). Skip the
+  // generic ack so the message reaches handleCollectLogo, which has its
+  // own LLM-driven classifier for what to do with the upload.
+  if (
+    !silencedForMedia &&
+    message.type === 'document' &&
+    user.state !== STATES.WEB_COLLECT_LOGO
+  ) {
+    try {
+      const { handleDocument } = require('./handlers/locationHandler');
+      const result = await handleDocument(user, message);
+      if (result?.handled) return;
+    } catch (err) {
+      logger.error(`[DOC] Handler failed for ${from}: ${err.message}`);
+    }
+  }
+
+  // ── Session recap (Phase 9) ────────────────────────────────────────────
+  // If the user has been silent for more than 30 min, fire a short
+  // contextual "welcome back" before the handler runs. Done HERE (after
+  // findOrCreateUser, before logMessage) so the gap query inside
+  // maybeBuildRecap sees the PREVIOUS turn as "latest user message"
+  // instead of the one we're about to log.
+  //
+  // Skip on slash commands and button/list taps — /reset is a fresh-start
+  // intent and a button tap is typically mid-flow navigation; a recap in
+  // front of either feels off.
+  const recapText = (message.text || '').trim();
+  const isSlash = recapText.startsWith('/');
+  const isInteractive = !!(message.buttonId || message.listId);
+  let recapFired = false;
+  if (message.type === 'text' && !isSlash && !isInteractive) {
+    try {
+      const { maybeBuildRecap } = require('./sessionRecap');
+      const recap = await maybeBuildRecap(user);
+      if (recap) {
+        logger.info(`[RECAP] Sending session recap to ${from}`);
+        // sendTextMessage auto-logs (sender.js); avoid duplicate row.
+        await sendTextMessage(user.phone_number, recap);
+        recapFired = true;
+      }
+    } catch (err) {
+      // A failed recap should never block the actual reply. Log and move
+      // on — the user still gets the handler's response.
+      logger.warn(`[RECAP] Recap failed for ${from}: ${err.message}`);
+    }
+  }
+
+  // ── Phase 15: return-visitor greeting ───────────────────────────────────
+  // If a user who previously completed a project (website, logo, ad,
+  // chatbot, SEO audit) comes back after a long gap and is in an idle
+  // state (not mid-collection), prepend a warm "welcome back" that
+  // references their business by name. Gated on !recapFired so the two
+  // mechanisms don't double-fire — recap handles users mid-flow with
+  // in-progress context; return-greet handles users whose prior work
+  // is complete.
+  if (message.type === 'text' && !isSlash && !isInteractive && !recapFired) {
+    try {
+      const { maybeBuildReturnGreeting } = require('./returnVisitor');
+      const greeting = await maybeBuildReturnGreeting(user);
+      if (greeting) {
+        logger.info(`[RETURN-GREET] Sending return-visitor greeting to ${from}`);
+        // sendTextMessage auto-logs (sender.js); avoid duplicate row.
+        await sendTextMessage(user.phone_number, greeting);
+      }
+    } catch (err) {
+      logger.warn(`[RETURN-GREET] Greeting failed for ${from}: ${err.message}`);
+    }
+  }
+
+  // Store ad referral data on first interaction (if present)
+  if (message.referral && !user.metadata?.adSource) {
+    const ref = message.referral;
+    const adText = `${ref.headline || ''} ${ref.body || ''}`.trim();
+    const product = identifyProduct(ref.body || ref.headline || '');
+    const adIndustry = identifyAdIndustry(adText);
+    await updateUserMetadata(user.id, {
+      adSource: product,
+      adIndustry,
+      adReferral: {
+        sourceId: ref.sourceId,
+        sourceType: ref.sourceType,
+        headline: ref.headline,
+        body: ref.body,
+        ctwaClid: ref.ctwaClid,
+        platform: channel,
+        timestamp: new Date().toISOString(),
+      },
+    });
+    user.metadata = { ...user.metadata, adSource: product, adIndustry, adReferral: ref };
+    logger.info(`[AD TRACKING] Platform: ${channel} | Product: ${product} | Industry: ${adIndustry} | Ad: ${ref.headline || 'N/A'} | User: ${from}`);
+  }
+
+  // Auto-update lead temperature based on user message count
+  const messageCount = (user.metadata?.userMessageCount || 0) + 1;
+  const currentTemp = user.metadata?.leadTemperature || 'COLD';
+  const newTemp = messageCount >= 10 ? 'HOT' : messageCount >= 5 ? 'WARM' : currentTemp;
+  if (newTemp !== currentTemp || messageCount !== user.metadata?.userMessageCount) {
+    await updateUserMetadata(user.id, { userMessageCount: messageCount, leadTemperature: newTemp });
+    if (newTemp !== currentTemp) {
+      logger.info(`[LEAD] ${from} temperature: ${currentTemp} → ${newTemp} (${messageCount} messages)`);
+    }
+  }
+
+  // Re-fetch user to get latest metadata (takeover flag may have been set from admin)
+  const { supabase } = require('../config/database');
+  const { data: freshMeta } = await supabase.from('users').select('metadata').eq('id', user.id).single();
+  if (freshMeta) user.metadata = freshMeta.metadata;
+
+  // If human has taken over this conversation, just log the message and stop
+  if (user.metadata?.humanTakeover) {
+    logger.info(`[HUMAN TAKEOVER] Message from ${from} logged (bot paused): "${(text || '').slice(0, 50)}"`);
+    return;
+  }
+
+  // ── WhatsApp Flow: completion ───────────────────────────────────────────
+  // The user submitted the native website-builder Flow. The parser put the
+  // answers on message.flowReply. Map them → websiteData and build. Inert
+  // unless a flow was actually sent (no flowReply otherwise).
+  if (message.flowReply) {
+    try {
+      const { handleFlowCompletion } = require('../flows/intake');
+      // generateWebsite (inside) sets WEB_GENERATING then RETURNS the
+      // post-build state (WEB_REVISIONS). We must persist it — otherwise
+      // the user is stuck in WEB_GENERATING and the approve → domain →
+      // payment flow never runs.
+      const newState = await handleFlowCompletion(user, message);
+      if (newState && newState !== user.state) {
+        await updateUserState(user.id, newState);
+      }
+    } catch (err) {
+      logger.error(`[FLOW] completion handling failed for ${from}: ${err.message}`);
+      await sendTextMessage(user.phone_number, "Got your details! Let me put your site together — one moment.");
+    }
+    return;
+  }
+
+  // ── WhatsApp Flow (CTWA users) ──────────────────────────────────────────
+  // The Flow is no longer sent here as a hard intercept — doing so replaced
+  // the chat greeting entirely. Instead salesBot greets first and then offers
+  // the Flow as an alternative (sendWebsiteFlowOffer), so the user can choose
+  // chat or form. Flow *submissions* are still handled above (message.flowReply).
+
+  // ── Disabled-service redirect ───────────────────────────────────────────
+  // If the user is mid-flow on a service we've disabled (see
+  // src/config/services.js — currently SEO / chatbot / ad / logo /
+  // app / marketing flows are all off-chat), notify the team and reset
+  // the user's state to SALES_CHAT so the bot can chat normally going
+  // forward. handoffToHuman sends the English message + admin email but
+  // does NOT silence the bot — the next message from the user will be
+  // answered normally by the sales bot. Scheduling states (book a call
+  // with our team) intentionally aren't disabled.
+  try {
+    const { isStateOnDisabledService, findServiceByState } = require('../config/services');
+    if (isStateOnDisabledService(user.state)) {
+      const svc = findServiceByState(user.state);
+      logger.info(
+        `[HANDOFF] Redirecting ${from} from disabled-service state ${user.state} (service=${svc?.key || 'unknown'}) to handoff`
+      );
+      const { handoffToHuman } = require('./handoff');
+      await handoffToHuman(user, {
+        serviceKey: svc?.key || null,
+        reason: 'in_flight_on_disabled_service',
+      });
+      try {
+        await updateUserState(user.id, STATES.SALES_CHAT);
+      } catch (err) {
+        logger.warn(`[HANDOFF] Failed to reset state to SALES_CHAT: ${err.message}`);
+      }
+      // End this turn after the handoff message goes out. The user's
+      // current message (likely an answer to a now-dormant question)
+      // would be confusing if salesBot tried to respond to it; better
+      // to let them re-prompt with the next message, which will flow
+      // through normally now that state is SALES_CHAT.
+      return;
+    }
+  } catch (err) {
+    logger.warn(`[HANDOFF] Disabled-service redirect threw: ${err.message}`);
+  }
+
+  // Check for reset command
+  if (text && text.toLowerCase().trim() === '/reset') {
+    // Feedback: rapid-reset detector — if the user issued /reset
+    // within the RAPID_RESET_WINDOW_MS of their previous one, log an
+    // implicit friction row with the conversation excerpt. Has to
+    // happen BEFORE the metadata clear below, since the clear wipes
+    // lastResetAt. We re-write lastResetAt after the clear.
+    let rapidResetTimestamp = null;
+    try {
+      const { recordResetAndMaybeFlag } = require('../feedback/feedback');
+      rapidResetTimestamp = await recordResetAndMaybeFlag(user);
+    } catch (err) {
+      logger.warn(`[FEEDBACK] recordResetAndMaybeFlag failed: ${err.message}`);
+    }
+
+    await updateUserState(user.id, STATES.SALES_CHAT);
+    // Clear trigger flags so flows can be re-triggered
+    const { updateUserMetadata } = require('../db/users');
+    await updateUserMetadata(user.id, {
+      websiteDemoTriggered: false,
+      seoAuditTriggered: false,
+      chatbotDemoTriggered: false,
+      chatbotDemoAgreed: false,
+      adGeneratorTriggered: false,
+      logoMakerTriggered: false,
+      returnToSales: false,
+      leadClosed: false,
+      meetingBooked: false,
+      leadBriefSent: false,
+      followupSteps: [],
+      lastSeoAnalysis: null,
+      lastSeoUrl: null,
+      seoTopFix: null,
+      seoAuditCompletedAt: null,
+      currentAuditId: null,
+      chatbotData: null,
+      adData: null,
+      logoData: null,
+      chatbotDemoSentAt: null,
+      chatbotDemoFollowedUp: false,
+      chatbotTrialActivated: false,
+      chatbotSlug: null,
+      chatbotTrialEndsAt: null,
+      // Website builder state — without these, a fresh /reset would still
+      // reuse the last business name, industry, services, contact info, and
+      // the half-built site record, skipping collection questions on restart.
+      websiteData: null,
+      currentSiteId: null,
+      revisionCount: 0,
+      bonusRevisionUsed: false,
+      lastRevisionComplexity: null,
+      // WhatsApp Flow send-once guard (src/flows/send.js:46). Without
+      // clearing these, a CTWA user who /resets never gets the website
+      // Flow re-sent — flowSentAt stays set, so maybeSendWebsiteFlow
+      // short-circuits forever. The CTWA gate (adReferral.ctwaClid) is
+      // intentionally preserved, so clearing just the guard lets the Flow
+      // be offered exactly once more after reset.
+      flowSentAt: null,
+      flowToken: null,
+      // Step-completed flags — without clearing these, a prior session's
+      // skip leaks across and suppresses the matching question forever.
+      emailSkipped: false,
+      contactSkipped: false,
+      // Other flow-state leaks found by the audit: each of these gets
+      // SET mid-flow but was never cleared on reset, so a previous
+      // session's state bled into the next flow.
+      // - currentMeetingId: stale pointer to a prior meeting row.
+      // - salonFlowOrigin: forces salon sub-flow into CONFIRM loopback
+      //   on a fresh user if set by a prior session.
+      // - webGenStartedAt: the in-progress generation guard gets
+      //   tripped by a stale timestamp.
+      currentMeetingId: null,
+      salonFlowOrigin: null,
+      webGenStartedAt: null,
+      // Phase 13 nsfw-legal decline flag. Without clearing these, a
+      // user who hits /reset after being declined (e.g. to try a
+      // different business) would stay soft-blocked for 30 min.
+      scopeDeclinedAt: null,
+      scopeDeclinedReason: null,
+      // Domain state — otherwise the sales bot sees a leftover
+      // selectedDomain and offers "umairbarber.com" to a fresh user.
+      selectedDomain: null,
+      domainStatus: null,
+      domainPaymentPending: false,
+      domainPurchasedAt: null,
+      // Rolling conversation summary (Phase 0) gets re-injected into every
+      // sales-bot prompt, so leaving it across /reset is the #1 way the
+      // previous session's context leaks into a "fresh" start. Clear it.
+      conversationSummary: null,
+      conversationSummaryAt: null,
+      // Humanize flags that gate per-user behavior across turns.
+      objectionTopics: [],
+      preferredLanguage: null,
+      // Voice-reply mode is a sticky preference; a /reset is a clean slate,
+      // so drop it too — otherwise a user who turned voice on stays in voice
+      // forever and can't get back to text via reset.
+      voiceReplies: false,
+      postWebsiteUpsellSent: false,
+      postWebsiteUpsellKind: null,
+      postWebsiteUpsellAt: null,
+      undoPendingState: null,
+      stateHistory: [],
+      // Lead-temperature accounting.
+      userMessageCount: 0,
+      leadTemperature: 'COLD',
+      // Session-recap gate.
+      sessionRecapLastAt: null,
+      // Phase 12: multi-service queue.
+      serviceQueue: [],
+      // Phase 15 return-visitor memory. Previously preserved across /reset
+      // so a completed customer got a "welcome back" greeting. Now cleared
+      // too — /reset is a full wipe: the bot forgets that prior work was
+      // ever done with us, treating the user as brand new.
+      lastBusinessName: null,
+      lastCompletedProjectType: null,
+      lastCompletedProjectAt: null,
+    });
+    user.state = STATES.SALES_CHAT;
+    // Mirror the voice-mode clear onto the in-memory user + per-turn context
+    // so anything sent during this reset turn goes out as text, not voice.
+    if (user.metadata) user.metadata.voiceReplies = false;
+    try {
+      const { setVoiceMode } = require('../messages/channelContext');
+      setVoiceMode(false);
+    } catch { /* defensive */ }
+    logger.info(`User ${from} reset conversation state + metadata (history preserved for admin)`);
+
+    // /reset now keeps past conversation rows in the DB so the admin
+    // dashboard can see what led up to the reset (helps diagnose why
+    // a user chose to restart). The bot, however, treats everything
+    // before this moment as invisible — every LLM-facing caller of
+    // getConversationHistory passes `afterTimestamp: user.metadata
+    // .lastResetAt` so the sales bot / sub-handlers / summarizer only
+    // see messages from the fresh session.
+    //
+    // A system-role sentinel row gives the admin chat view a visible
+    // divider at the /reset moment.
+    const resetAt = new Date(rapidResetTimestamp || Date.now()).toISOString();
+    try {
+      await logMessage(user.id, '━━━ session restarted (/reset) ━━━', 'system');
+    } catch (err) {
+      logger.warn(`[RESET] Failed to write sentinel row: ${err.message}`);
+    }
+
+    // Persist lastResetAt so (a) LLM-facing history queries filter
+    // past this point, and (b) the next /reset can detect rapid-
+    // succession. Has to happen AFTER the metadata clear above.
+    try {
+      await updateUserMetadata(user.id, { lastResetAt: resetAt });
+      user.metadata = { ...(user.metadata || {}), lastResetAt: resetAt };
+    } catch (err) {
+      logger.warn(`[RESET] Failed to persist lastResetAt: ${err.message}`);
+    }
+
+    // Silent reset: no outbound message. The next user inbound triggers
+    // salesBot's LLM-driven first-reply (with the mandatory AI-assistant
+    // disclosure). Avoids a hardcoded "greeting" overlapping with the
+    // proper LLM greeting. See PIXIE_CHAT_FLOW_PLAN.md Section A.0 + D.
+    await logMessage(user.id, '[RESET] State + metadata cleared (silent)', 'system');
+    return;
+  }
+
+  // Check for menu command (text or button) - go back to service selection
+  // AND send the main menu directly. Falling through would land in
+  // handleServiceSelection's default "hmm, didn't catch that" branch
+  // because "/menu" isn't in matchServiceFromText's service-keyword list.
+  if ((text && text.toLowerCase().trim() === '/menu') || message.buttonId === 'menu_main') {
+    await updateUserState(user.id, STATES.SERVICE_SELECTION);
+    user.state = STATES.SERVICE_SELECTION;
+    // Phase 12: explicit menu request cancels any pending queue — user is
+    // re-choosing, not continuing the original plan.
+    const { clearServiceQueue } = require('./serviceQueue');
+    await clearServiceQueue(user);
+    const { sendMainMenu } = require('./handlers/serviceSelection');
+    await sendMainMenu(user);
+    return;
+  }
+
+  // ── Voice-reply preference interceptor (global, all states) ───────────────
+  // Voice replies are a sticky cross-flow preference, not a salesbot tag.
+  // When the user asks to receive replies as voice notes (or to switch back
+  // to text), flip user.metadata.voiceReplies, ack, and short-circuit so a
+  // pure "voice note mein baat karo" request never reaches a collection
+  // handler and gets mistaken for field data (e.g. a business name). A cheap
+  // multilingual prefilter gates the LLM call so normal turns pay nothing.
+  if (
+    text &&
+    !message.buttonId &&
+    !message.listId &&
+    message.type === 'text' &&
+    !user.metadata?.humanTakeover
+  ) {
+    try {
+      const {
+        prefilterMatches,
+        classifyVoicePreference,
+        ackVoiceOn,
+        ackVoiceOff,
+      } = require('../llm/voicePreference');
+      if (prefilterMatches(text)) {
+        const { wantsVoice, wantsText } = await classifyVoicePreference(text, user.id);
+        const alreadyOn = !!user.metadata?.voiceReplies;
+        if (wantsVoice && !wantsText && !alreadyOn) {
+          const { setVoiceMode } = require('../messages/channelContext');
+          await updateUserMetadata(user.id, { voiceReplies: true });
+          user.metadata = { ...(user.metadata || {}), voiceReplies: true };
+          setVoiceMode(true); // so the ack itself goes out as a voice note
+          logger.info(`[VOICE] ${user.phone_number} voice mode ON`);
+          await sendTextMessage(user.phone_number, await ackVoiceOn(text));
+          return;
+        }
+        if (wantsText && !wantsVoice && alreadyOn) {
+          const { setVoiceMode } = require('../messages/channelContext');
+          await updateUserMetadata(user.id, { voiceReplies: false });
+          user.metadata = { ...(user.metadata || {}), voiceReplies: false };
+          setVoiceMode(false); // ack goes out as text
+          logger.info(`[VOICE] ${user.phone_number} voice mode OFF`);
+          await sendTextMessage(user.phone_number, await ackVoiceOff(text));
+          return;
+        }
+      }
+    } catch (err) {
+      logger.warn(`[VOICE] preference interceptor failed: ${err.message}`);
+    }
+  }
+
+  // ── Salon owner commands (run before state routing) ───────────────────────
+  // Lets salon owners query/cancel bookings from any state via plain text:
+  // "bookings", "bookings today", "cancel 123".
+  if (text && !message.buttonId && !message.listId && message.type === 'text') {
+    try {
+      const handled = await tryHandleSalonOwnerCommand(user, message);
+      if (handled) return;
+    } catch (err) {
+      logger.error('Salon owner command interceptor failed:', err);
+    }
+  }
+
+  // ── Phase 12: multi-service queue pre-interceptor ─────────────────────────
+  // When the user is NOT mid-collection (sales chat, service selection,
+  // or informative chat) and their message names 2+ queueable services
+  // in one breath, build the queue and kick off the first flow. For
+  // collection states the intent classifier below picks it up via the
+  // "menu" branch, so we scope this early check to the idle states only.
+  if (
+    text &&
+    !message.buttonId &&
+    !message.listId &&
+    message.type === 'text' &&
+    (user.state === STATES.SALES_CHAT ||
+      user.state === STATES.SERVICE_SELECTION ||
+      user.state === STATES.INFORMATIVE_CHAT)
+  ) {
+    try {
+      const { detectServiceQueue, startServiceQueue } = require('./serviceQueue');
+      const plural = await detectServiceQueue(message.text || '', user.id);
+      if (plural.length >= 2) {
+        await updateUserState(user.id, STATES.SERVICE_SELECTION);
+        user.state = STATES.SERVICE_SELECTION;
+        const newState = await startServiceQueue(user, plural);
+        if (newState && newState !== user.state) {
+          await updateUserState(user.id, newState);
+        }
+        return;
+      }
+    } catch (err) {
+      logger.error('[QUEUE] Plural pre-interceptor failed:', err);
+      // Fall through to normal routing — never let a queue bug block a reply.
+    }
+  }
+
+  // ── Undo / keep classifier ────────────────────────────────────────────────
+  // Phase 3: undo / keep verdict now comes from the unified
+  // turnClassifier (started up at the top of the function in parallel
+  // with the abuse detector). Falls back to the legacy classifyUndoOrKeep
+  // call only when the turn classifier didn't run for this state — keeps
+  // behaviour identical across edge cases like SALON_INSTAGRAM that the
+  // domain-states + COLLECTION_STATES gate misses.
+  if (
+    text &&
+    !message.buttonId &&
+    !message.listId &&
+    message.type === 'text' &&
+    UNDOABLE_STATES.has(user.state)
+  ) {
+    let intent = 'none';
+    if (turnClassifierPromise) {
+      const v = await turnClassifierPromise;
+      if (v && (v.primary === 'undo' || v.primary === 'keep')) {
+        intent = v.primary;
+      }
+    } else {
+      // No unified classifier ran (state isn't in COLLECTION_STATES /
+      // domain set) — fall through to the legacy single-purpose call so
+      // states like SALON_INSTAGRAM still get undo/keep handling.
+      intent = await classifyUndoOrKeep(text, {
+        undoPending: user.metadata?.undoPendingState === user.state,
+        userId: user.id,
+      });
+    }
+    if (intent === 'undo') {
+      await handleUndo(user, message);
+      return;
+    }
+    if (intent === 'keep') {
+      await clearUndoPending(user);
+      try {
+      const webDev = require('./handlers/webDev');
+      const wd = user.metadata?.websiteData || {};
+
+      // Compute next state. Salon sub-flow has its own linear order; other
+      // states defer to nextMissingWebDevState.
+      let nextState;
+      if (user.state === STATES.SALON_BOOKING_TOOL) {
+        // Embed mode skips hours/durations (the booking widget owns
+        // scheduling); native goes through hours next.
+        nextState = wd.bookingMode === 'embed'
+          ? null  // sentinel — finishSalonFlow handles rest
+          : STATES.SALON_HOURS;
+      } else if (user.state === STATES.SALON_HOURS) {
+        nextState = (wd.services && wd.services.length > 0)
+          ? STATES.SALON_SERVICE_DURATIONS
+          : null;
+      } else if (user.state === STATES.SALON_SERVICE_DURATIONS) {
+        nextState = null; // finishSalonFlow handles what's next
+      } else {
+        nextState = webDev.nextMissingWebDevState(wd, user.metadata || {});
+      }
+
+      const { localize } = require('../utils/localizer');
+
+      // Null sentinel for salon → route through finishSalonFlow. It
+      // handles contact-already-collected vs needs-collection vs confirm.
+      if (nextState === null) {
+        // Inline minimal finishSalonFlow: show summary if contact known,
+        // else ask for contact. finishSalonFlow is not exported but we
+        // can mimic its decision.
+        const hasContact = !!(wd.contactEmail || wd.contactPhone || wd.contactAddress);
+        if (hasContact) {
+          await sendTextMessage(user.phone_number, await localize('Kept as is.', user, text));
+          await webDev.showConfirmSummary(user);
+        } else {
+          await sendTextMessage(
+            user.phone_number,
+            await localize(
+              "Kept as is.\n\nLast thing — what contact info do you want on the site? Send your email, phone, and/or address.",
+              user,
+              text
+            )
+          );
+          await updateUserState(user.id, STATES.WEB_COLLECT_CONTACT);
+        }
+        await logMessage(user.id, `Undo: kept, advanced through salon flow`, 'assistant');
+        return;
+      }
+
+      if (nextState && nextState !== user.state) {
+        await updateUserState(user.id, nextState);
+        user.state = nextState;
+      }
+      if (nextState === STATES.WEB_CONFIRM) {
+        await webDev.showConfirmSummary(user);
+      } else {
+        const question = webDev.questionForState(nextState, wd);
+        await sendTextMessage(
+          user.phone_number,
+          await localize(`Kept as is. ${question}`, user, text)
+        );
+      }
+      await logMessage(user.id, `Undo: kept, advanced to ${nextState}`, 'assistant');
+      } catch (err) {
+        logger.error(`[UNDO] Keep-advance failed: ${err.message}`);
+        const { localize } = require('../utils/localizer');
+        await sendTextMessage(
+          user.phone_number,
+          await localize("Kept as is. What's next?", user, text)
+        );
+      }
+      return;
+    }
+    // intent === 'none' — fall through to normal routing
+  }
+
+  // ── Feedback: implicit friction detectors ──────────────────────────────
+  // Text-only, post-findOrCreateUser, before state routing. Each
+  // detector runs cheap regex/counter checks; on hit, writes an
+  // implicit feedback row and (for escalating signals) offers a human
+  // handoff. Does NOT short-circuit message processing — just logs
+  // signal and continues, so the user still gets the handler's reply.
+  if (
+    text &&
+    !message.buttonId &&
+    !message.listId &&
+    message.type === 'text'
+  ) {
+    try {
+      const {
+        maybeLogFrustration,
+        bumpCorrectionLoop,
+        classifyFeedbackSignals,
+        offerHumanHandoff,
+        isTester,
+        CORRECTION_LOOP_THRESHOLD,
+        TRIGGER,
+      } = require('../feedback/feedback');
+
+      if (!isTester(user)) {
+        // Single classifier call returns all the inbound-message intents
+        // we'll need this turn — feedback signals always, plus the salesBot
+        // user-intent pair (notInterested / agreed) when we're heading
+        // into salesBot. Stashing on user._classifiedIntents lets salesBot
+        // read the same result instead of issuing its own classifier call,
+        // saving one round-trip on the hot path.
+        const includeSales = user.state === STATES.SALES_CHAT;
+        const signals = await classifyFeedbackSignals(text, {
+          userId: user.id,
+          includeSales,
+        });
+        user._classifiedIntents = signals;
+
+        // Frustrated phrasing (silent log, no user-facing action)
+        await maybeLogFrustration(user, text, signals.frustrated);
+
+        // Help-escape (explicit "talk to a human") — offer handoff.
+        // Pairs with humanTakeover toggle per user's design decision.
+        if (signals.helpEscape) {
+          await offerHumanHandoff(user, TRIGGER.HELP_ESCAPE);
+          return; // handoff prompt replaces the normal turn
+        }
+
+        // Correction-loop counter — only meaningful in collection states
+        // where the user is answering a specific question.
+        if (COLLECTION_STATES.has(user.state)) {
+          const count = await bumpCorrectionLoop(user, text, signals.correction);
+          if (count >= CORRECTION_LOOP_THRESHOLD) {
+            // Log the event + offer handoff. Reset the counter so we
+            // don't keep re-offering on every subsequent message.
+            const { logFeedback, SOURCE } = require('../feedback/feedback');
+            const { getConversationHistory } = require('../db/conversations');
+            let excerpt = [];
+            try {
+              const hist = await getConversationHistory(user.id, 8);
+              excerpt = (hist || []).map((m) => ({
+                role: m.role,
+                text: String(m.content || m.message_text || '').slice(0, 200),
+              }));
+            } catch { /* best-effort excerpt */ }
+            await logFeedback({
+              user,
+              source: SOURCE.IMPLICIT,
+              triggerType: TRIGGER.CORRECTION_LOOP,
+              flow: 'general',
+              rating: 'issues',
+              comment: `${count} consecutive corrections in state ${user.state}`,
+              excerpt,
+              state: user.state,
+            });
+            await updateUserMetadata(user.id, { correctionLoopCount: 0 });
+            await offerHumanHandoff(user, TRIGGER.CORRECTION_LOOP);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn(`[FEEDBACK] Implicit detector hook failed: ${err.message}`);
+    }
+  }
+
+  // ── Intent interceptor ─────────────────────────────────────────────────────
+  // For collection states with free-text (no button press), classify intent
+  // before blindly passing the text to the handler. The classifier was
+  // kicked off earlier (in parallel with the abuse check) so by the time
+  // we get here it's typically already resolved — awaiting is essentially
+  // free. Fall back to a fresh classify call if the promise wasn't started
+  // (e.g. user.metadata changed mid-turn so the kickoff gates didn't match).
+  if (
+    text &&
+    !message.buttonId &&
+    !message.listId &&
+    message.type === 'text' &&
+    COLLECTION_STATES.has(user.state)
+  ) {
+    // Cross-state correction check first — "wait, the email is X" mid-hours
+    // should update email, not be classified as an answer/menu/exit. The
+    // unified turnClassifier returns verdict.correction when applicable
+    // (with active-field guarding already applied inside the classifier),
+    // so we just read it here instead of running a separate detect call.
+    let _turnVerdict = null;
+    if (turnClassifierPromise) {
+      _turnVerdict = await turnClassifierPromise;
+    }
+    const correction = _turnVerdict && _turnVerdict.primary === 'correction' ? _turnVerdict.correction : null;
+    // In WEB_REVISIONS the site is already deployed, so a field correction must
+    // go through handleRevisions (apply + REDEPLOY + count), not the metadata-
+    // only applyFieldCorrection path used during pre-build collection — else the
+    // change silently never reaches the live site ("replace Shazam with Ghalib"
+    // updated the name but didn't redeploy). Let revisions fall through.
+    if (correction && user.state !== STATES.WEB_REVISIONS) {
+        try {
+          const webDev = require('./handlers/webDev');
+          const ack = await webDev.applyFieldCorrection(user, correction.field, correction.value, correction.op || 'replace');
+          if (ack) {
+            logger.info(`[CORRECTION] Applied ${correction.field} (${correction.op || 'replace'}) for ${from}`);
+            const currentQuestion = STATE_QUESTION[user.state];
+            const combined = currentQuestion
+              ? `${ack}\n\nNow back to: ${currentQuestion}`
+              : ack;
+            await sendWithMenuButton(user.phone_number, combined);
+            return;
+          }
+          logger.info(`[CORRECTION] applyFieldCorrection rejected ${correction.field}=${correction.value} — falling through to state handler`);
+        } catch (err) {
+          logger.warn(`[CORRECTION] apply failed for ${from}: ${err.message} — falling through`);
+        }
+    }
+
+    // intentPromise is guaranteed non-null inside this block because the
+    // outer `if` gates on the same conditions that set it (COLLECTION_STATES
+    // OR TURN_CLASSIFIER_DOMAIN_STATES, text-only, no buttons, no humanTakeover).
+    // If intentPromise ever does come back null (defensive default), treat
+    // as 'answer' so the handler runs.
+    const intent = intentPromise ? await intentPromise : 'answer';
+    logger.debug(`Intent classified for ${from} in state ${user.state}: ${intent}`);
+
+    if (intent === 'menu' || intent === 'exit') {
+      // Flow-switch or exit. Try to figure out which service the user wants
+      // to switch TO (handles negation like "forget the website, do chatbot"
+      // and plurals like "marketing ads" via LLM fallback when regex alone
+      // isn't reliable). Only transition + dispatch when we actually find
+      // something to switch to — otherwise the message was an LLM
+      // misclassification (e.g. "bhajo", typos, dismissive Roman-Urdu /
+      // Spanish replies the classifier mis-read as menu intent) and we
+      // fall through so the current handler can treat it as a normal
+      // answer / chat input. The old behavior dumped these users into a
+      // "Here are our main services" menu, which broke the conversational
+      // flow and read as if the bot couldn't keep up.
+      const {
+        detectServiceQueue,
+        startServiceQueue,
+        maybeStartNextQueuedService,
+        dropQueuedService,
+        hasQueue,
+      } = require('./serviceQueue');
+
+      // Phase 12: if the switch names 2+ queueable services ("forget
+      // this, do a website AND a logo AND some ads"), build the queue
+      // and kick off the first flow here. Overwrites any prior queue.
+      const plural = await detectServiceQueue(message.text || text || '', user.id);
+      if (plural.length >= 2) {
+        await updateUserState(user.id, STATES.SERVICE_SELECTION);
+        user.state = STATES.SERVICE_SELECTION;
+        const newState = await startServiceQueue(user, plural);
+        if (newState && newState !== user.state) {
+          await updateUserState(user.id, newState);
+        }
+        return;
+      }
+
+      const { pickServiceFromSwitch } = require('./handlers/serviceSelection');
+      const targetService = await pickServiceFromSwitch(text, user.id);
+
+      // Phase 12: user has a pending queue AND their switch has no specific
+      // target ("forget this, lets do the rest" / "next" / "skip this").
+      // Advance the queue instead of falling into the generic menu.
+      //
+      // Gate on EXPLICIT skip phrasing. The intent classifier occasionally
+      // labels an ambiguous answer as "menu" (e.g. "Hasnain Plumbing" in a
+      // name-collection state); without this gate, we'd silently advance
+      // the queue and eat the user's real answer.
+      const skipPhrasingRx = /\b(rest|next|continue|skip|forget\s+(?:this|it|that)|forget\s+the|drop\s+(?:this|it|that)|scrap\s+(?:this|it|that)|cancel\s+(?:this|it|that)|pass|move\s+on|keep\s+going|proceed|whatever|on\s+to\s+the\s+next|remaining|others?)\b/i;
+      const hasSkipPhrasing = skipPhrasingRx.test(message.text || text || '');
+      if (!targetService && hasQueue(user) && hasSkipPhrasing) {
+        try {
+          await updateUserState(user.id, STATES.SERVICE_SELECTION);
+          user.state = STATES.SERVICE_SELECTION;
+          const newState = await maybeStartNextQueuedService(user, 'skipped');
+          if (newState) {
+            await updateUserState(user.id, newState);
+            return;
+          }
+        } catch (err) {
+          // Surface the error instead of leaving the user with only the
+          // "skipping ahead" message. The queue has already advanced
+          // (next item was popped), so the message reflects current state.
+          logger.error(`[QUEUE] Advance failed after skip: ${err.message}`, { stack: err.stack?.split('\n').slice(0, 5).join('\n') });
+          try {
+            await sendTextMessage(
+              user.phone_number,
+              "hmm, something glitched while starting the next one. let me know what you'd like to work on."
+            );
+          } catch { /* last-resort nudge also failed — nothing more to do */ }
+          return;
+        }
+      }
+
+      // Specific target found — transition + dispatch to its handler.
+      if (targetService) {
+        // Phase 12: user jumped to a specific service that's ALREADY queued.
+        // Drop it (and anything before it) from the queue so we don't run
+        // the same flow twice when it completes.
+        if (hasQueue(user)) await dropQueuedService(user, targetService);
+
+        await updateUserState(user.id, STATES.SERVICE_SELECTION);
+        user.state = STATES.SERVICE_SELECTION;
+
+        const newState = await handleServiceSelection(user, {
+          ...message,
+          // Pre-resolved service tells handleServiceSelection exactly
+          // which case to run.
+          buttonId: targetService,
+          listId: '',
+          text: '',
+        });
+        if (newState && newState !== user.state) {
+          await updateUserState(user.id, newState);
+        }
+        return;
+      }
+
+      // No target detected. The classifier said "menu" but neither
+      // detectServiceQueue nor pickServiceFromSwitch could pin down a
+      // service to route to. Do NOT dump the user into a generic
+      // service-selection menu — that's almost always a worse UX than
+      // letting the current handler take a swing at the message.
+      // Fall through (no return, no state transition).
+      logger.info(`[ROUTER] Intent=${intent} but no service target detected for ${from} — falling through to current handler instead of showing menu`);
+    }
+
+    if (intent === 'greeting') {
+      const currentQuestion = STATE_QUESTION[user.state];
+      if (currentQuestion && !recapFired) {
+        await sendWithMenuButton(user.phone_number, `Yep, still here! ${currentQuestion}`);
+        await logMessage(user.id, `Greeted + re-asked: ${currentQuestion}`, 'assistant');
+        return;
+      }
+      // No active question (SALES_CHAT etc.) — fall through to normal handler.
+    }
+
+    // A domain-add request at the revisions step is ACTIONABLE, not a meta
+    // question. The scoped aside (WEB_REVISIONS_ASIDE_PROMPT) is explicitly
+    // told NOT to mention domains, so it would deflect with "I can only change
+    // the site". The turn classifier buckets "i need a domain" / "get me a
+    // domain" as 'question' inconsistently — when it does, route it to
+    // handleRevisions' late-domain flow instead of swallowing it as an aside.
+    let isReviseDomainAsk = false;
+    if (intent === 'question' && user.state === STATES.WEB_REVISIONS) {
+      try {
+        const { classifyLateDomainIntent } = require('./handlers/webDev');
+        isReviseDomainAsk = await classifyLateDomainIntent(text, user.id);
+        if (isReviseDomainAsk) {
+          logger.info(`[ROUTER] WEB_REVISIONS domain-add request classified as 'question' — routing to handler, not aside`);
+        }
+      } catch (err) {
+        logger.warn(`[ROUTER] late-domain re-check failed: ${err.message}`);
+      }
+    }
+
+    if (intent === 'question' && !isReviseDomainAsk) {
+      // Answer their question, then bring them back to where they were.
+      // If the LLM call fails, skip the aside and just re-prompt — better
+      // than stalling silently.
+      const currentQuestion = STATE_QUESTION[user.state];
+
+      // Pure-punctuation input ("?", "??", "...") is a "what did you ask?"
+      // signal, not a real question with content to respond to. Skip the
+      // LLM aside (which would generate something awkward like "Sure,
+      // what's your question?") and just re-ask the current question.
+      const isReprompt = /^[?!.,;\s]+$/.test(String(text || '').trim());
+      if (isReprompt) {
+        if (currentQuestion && !recapFired) {
+          await sendWithMenuButton(user.phone_number, currentQuestion);
+          await logMessage(user.id, `Re-asked: ${currentQuestion}`, 'assistant');
+        }
+        return;
+      }
+
+      // Pick an aside prompt scoped to the current flow. Generic
+      // GENERAL_CHAT_PROMPT pitches the full agency menu (SEO, social,
+      // chatbots…) which reads as a non sequitur when the user is
+      // reviewing a delivered site. The scoped prompt answers in
+      // context AND ends with the forward-looking invitation, which
+      // lets us skip the separate "back to where we were" re-prompt.
+      const scopedAside = user.state === STATES.WEB_REVISIONS;
+      const asidePrompt = scopedAside ? WEB_REVISIONS_ASIDE_PROMPT : GENERAL_CHAT_PROMPT;
+
+      // "Show me your previous work / examples" deserves an actual screenshot
+      // + branded preview URL, not a text-only promise. The plain aside below
+      // can only send text, so a user who asked to see examples mid-flow
+      // (e.g. while we collect their business name) got "yeah I can show you a
+      // few" and nothing else. Reuse the salesBot screenshot infra here so it
+      // works in EVERY flow/state. Industry is known once the website demo
+      // fired; otherwise it falls back to the generic example.
+      try {
+        if (await classifyExamplesRequest(text, user.id)) {
+          const industryKey = await resolveShowcaseIndustry(user);
+          const previewUrl = getAdPreviewUrl(industryKey);
+          try {
+            await sendImage(user.phone_number, getSampleScreenshotUrl(industryKey));
+          } catch (imgErr) {
+            logger.warn(`[ROUTER] examples sendImage failed for ${from}: ${imgErr.message}`);
+          }
+          // Language-aware caption: share the live URL, note it's
+          // customizable, and fold the re-prompt into the same message.
+          const showcaseSystemPrompt =
+            `${asidePrompt}\n\n## YOU JUST SENT A SAMPLE\nYou just sent the user a screenshot of a REAL website we built, live at ${previewUrl}. In ONE short message: (a) share that exact URL inline (keep it verbatim), (b) say it can be fully customized for their business` +
+            (currentQuestion
+              ? `, (c) then gently bring them back to: "${currentQuestion}" — paraphrase it, do NOT copy verbatim, do NOT split into a second message.`
+              : `.`) +
+            ` No re-introduction, no emoji unless they used one.`;
+          let showcaseReply = null;
+          try {
+            showcaseReply = await generateResponse(
+              showcaseSystemPrompt,
+              [{ role: 'user', content: text }],
+              { userId: user.id, operation: 'examples_showcase' }
+            );
+          } catch (genErr) {
+            logger.warn(`[ROUTER] examples showcase text failed for ${from}: ${genErr.message}`);
+          }
+          // Guarantee the URL survives even if the LLM dropped it; clean
+          // static fallback if the call failed entirely.
+          if (showcaseReply && !showcaseReply.includes(previewUrl)) {
+            showcaseReply = `${showcaseReply}\n${previewUrl}`;
+          }
+          if (!showcaseReply) {
+            showcaseReply = currentQuestion
+              ? `Here's a recent one we built: ${previewUrl} — fully customizable for you. ${currentQuestion}`
+              : `Here's a recent one we built: ${previewUrl} — fully customizable for you.`;
+          }
+          await sendTextMessage(user.phone_number, showcaseReply);
+          return; // Stay in same state; example shown + re-anchored.
+        }
+      } catch (exErr) {
+        logger.warn(`[ROUTER] examples-request handling failed for ${from}: ${exErr.message} — falling through to generic aside`);
+      }
+
+      let asideSent = false;
+      try {
+        // Inject the current-state question into the aside system prompt so
+        // the LLM can answer the user's question AND fold the re-prompt
+        // into the same reply — instead of us sending a second "back to
+        // where we were" message after. One message, no flood.
+        const asideSystemPrompt = currentQuestion
+          ? `${asidePrompt}\n\n## CURRENT FLOW CONTEXT (use to close your reply)\nThe user is in the middle of a flow and the question they need to answer is:\n  "${currentQuestion}"\n\nAfter answering their off-topic question in 1-3 sentences, **close your reply in the SAME message** by gently bringing them back to the question above — paraphrase it in your own words (do NOT copy it verbatim, do NOT prefix with "back to where we were", do NOT split into a second message). One reply, two beats: answer → bring them back. Never two separate messages.`
+          : asidePrompt;
+        const aside = await generateResponse(
+          asideSystemPrompt,
+          [{ role: 'user', content: text }],
+          { userId: user.id, operation: 'off_topic_aside' }
+        );
+        // sendTextMessage auto-logs (sender.js); avoid duplicate row.
+        await sendTextMessage(user.phone_number, aside);
+        asideSent = true;
+      } catch (err) {
+        logger.warn(`[ROUTER] Off-topic aside LLM call failed for ${from}: ${err.message}`);
+      }
+
+      // Re-prompt is only sent as a FALLBACK now — when the aside LLM
+      // call failed and we have nothing else to say. The normal happy
+      // path is: aside reply already includes the re-prompt (per the
+      // system-prompt injection above) so we never send a second message.
+      // Also skipped when a session recap fired (its trailing "what's
+      // next?" already covers re-prompting).
+      if (!asideSent && currentQuestion && !recapFired) {
+        await sendWithMenuButton(
+          user.phone_number,
+          `Now, back to where we were - ${currentQuestion}`
+        );
+        await logMessage(user.id, `Reminded user: ${currentQuestion}`, 'assistant');
+      }
+      return; // Stay in same state
+    }
+
+    if (intent === 'objection') {
+      // Phase 8: the user is pushing back on the process (price, doubt,
+      // stalling, competitor). The objection handler validates, shares
+      // light social proof if relevant, and offers a low-commitment next
+      // step — no re-sell, no fake urgency. User stays in the same state
+      // so their next message lands in the normal collection flow.
+      await handleObjection(user, message, user.state, STATE_QUESTION[user.state]);
+      return;
+    }
+
+    // intent === 'answer' - fall through to normal handler
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // ── Sales-chat objection interceptor ───────────────────────────────────────
+  // The sales bot has its own aggressive Stage 6 ("value-stack, drop a tier,
+  // re-close"), which trips users into bullet-point re-pitches after a simple
+  // "too expensive". Before the sales bot runs, check if the message is a
+  // clear objection — if so, route through the gentle objectionHandler
+  // instead and stay in SALES_CHAT. User's next message flows normally.
+  if (
+    user.state === STATES.SALES_CHAT &&
+    text &&
+    !message.buttonId &&
+    !message.listId &&
+    message.type === 'text' &&
+    (await isSalesObjection(text, user.id))
+  ) {
+    logger.info(`[SALES] Objection intercepted for ${from} — routing to gentle handler`);
+    await handleObjection(user, message, STATES.SALES_CHAT, 'sales conversation');
+    return;
+  }
+
+  // States that legitimately accept image messages — everything else should
+  // reject images so a stray photo doesn't silently mutate state via '[Image]'.
+  const IMAGE_AWARE_STATES = new Set([
+    STATES.WEB_COLLECT_LOGO,
+    STATES.WEB_COLLECT_LISTINGS_PHOTOS,
+    STATES.WEB_COLLECT_PROJECTS_PHOTOS,
+    STATES.WEB_REVISIONS,
+    STATES.AD_COLLECT_IMAGE,
+  ]);
+
+  // Non-text message types that should never reach text-collection handlers.
+  // Audio is NOT included — it's transcribed earlier in the router so by the
+  // time we get here it arrives as real text.
+  const NON_TEXT_TYPES = new Set(['image', 'sticker', 'document', 'location']);
+  // The parser injects placeholder text shaped like "[Image]" / "[Sticker]" /
+  // "[Unsupported message type: X]" / "[Location: lat,lng]" (parser.js:133).
+  // Catching the shape as a fallback covers any future unrecognized type.
+  const PLACEHOLDER_RE = /^\[[^\]]+\]$/;
+  const trimmedText = String(message.text || '').trim();
+  const isImageMsg = message.type === 'image';
+  const isNonTextMsg =
+    NON_TEXT_TYPES.has(message.type) ||
+    (trimmedText && PLACEHOLDER_RE.test(trimmedText) && message.type !== 'text');
+
+  // Images flow through to handlers at image-aware states (logo upload,
+  // portfolio/listing photos, etc.). Every other non-text shape gets a
+  // type-specific reply with a hardcoded English fallback if the LLM is
+  // unavailable — this branch must NEVER let an exception bubble up to
+  // the "glitched" catch-all at line ~478.
+  if (isNonTextMsg && !(isImageMsg && IMAGE_AWARE_STATES.has(user.state))) {
+    const wd = user.metadata?.websiteData || {};
+    let currentQuestion = '';
+    try { currentQuestion = questionForState(user.state, wd) || ''; } catch { /* defensive */ }
+
+    let englishMsg;
+    switch (message.type) {
+      case 'image':
+        englishMsg = currentQuestion
+          ? `I can't read images here — could you send your answer as text? Right now I'm asking: ${currentQuestion}`
+          : `I got your photo, but I work with text in this chat — tell me what kind of business you have and I'll show you a live example in seconds.`;
+        break;
+      case 'sticker':
+        englishMsg = currentQuestion
+          ? `I can't read stickers — please type your answer. ${currentQuestion}`
+          : `I can't read stickers — please type your message.`;
+        break;
+      case 'document':
+        englishMsg = currentQuestion
+          ? `I can't read documents in this chat — please type your answer. ${currentQuestion}`
+          : `I can't read documents in this chat — please type your message.`;
+        break;
+      case 'location':
+        englishMsg = currentQuestion
+          ? `Got the location pin, but I need your answer as text here — ${currentQuestion}`
+          : `Got the location pin, but I work with text here — tell me what you'd like to do.`;
+        break;
+      default:
+        englishMsg = currentQuestion
+          ? `That message type isn't supported here — please send your answer as text. ${currentQuestion}`
+          : `That message type isn't supported here — please send your message as text.`;
+        break;
+    }
+
+    // safeLocalize — localize with a hardcoded English fallback. The whole
+    // point of this branch is to NEVER produce the generic "glitched"
+    // message, even if the LLM path throws (timeout, rate-limit, DB hiccup).
+    let outText = englishMsg;
+    try {
+      const { localize } = require('../utils/localizer');
+      outText = await localize(englishMsg, user, '');
+    } catch (err) {
+      logger.warn(`[ROUTER] non-text guard: localize failed (${err.message}) — using English fallback`);
+    }
+    try {
+      await sendTextMessage(user.phone_number, outText);
+    } catch (err) {
+      logger.warn(`[ROUTER] non-text guard: sendTextMessage failed (${err.message})`);
+    }
+    return;
+  }
+
+  // Get handler for current state
+  const handler = STATE_HANDLERS[user.state] || handleWelcome;
+
+  logger.debug(`Routing message for ${from}`, { state: user.state });
+
+  // Remember the state we were in BEFORE the handler runs, so the undo
+  // stack can push it once the handler tells us we're transitioning.
+  const stateBeforeHandler = user.state;
+
+  // Execute the handler
+  const newState = await handler(user, message);
+
+  // If handler returned a new state, update it
+  if (newState && newState !== user.state) {
+    // Push the OLD state onto the undo history so the user can walk back
+    // a step later. pushStateHistory filters to undo-able states only.
+    await pushStateHistory(user, stateBeforeHandler);
+    // Clear the undo-pending marker — once the user has answered a popped
+    // step, there's nothing pending anymore.
+    if (user.metadata?.undoPendingState) await clearUndoPending(user);
+    await updateUserState(user.id, newState);
+    logger.debug(`State transition for ${from}: ${user.state} → ${newState}`);
+  }
+
+  // Refresh the rolling conversation summary if we've crossed the interval.
+  // Fire-and-forget — must not block the turn; the summary manager swallows errors.
+  maybeUpdateSummary(user).catch(() => {});
+
+  // Fire-and-forget abuse judge. Every 5 inbound turns, a small LLM call
+  // scans the conversation and flags the user when the intent looks like
+  // token-burn (gibberish, jailbreak attempts, persistent trolling).
+  // Two consecutive 'abusive' verdicts trigger handover — the next inbound
+  // turn will short-circuit to the canned reply at the top of this fn.
+  try {
+    const abuse = require('../abuse/detector');
+    abuse.maybeRunJudge(user).catch((err) =>
+      logger.warn(`[ABUSE] Judge threw: ${err.message}`)
+    );
+  } catch (err) {
+    logger.warn(`[ABUSE] Could not dispatch judge: ${err.message}`);
+  }
+}
+
+module.exports = { routeMessage };

@@ -1,0 +1,36 @@
+node_modules/
+.env
+*.log
+.cache/
+dist/
+
+# Design Automation (separate Next.js project — do not commit here)
+Design-Automation-V2/
+
+.claude/
+
+# Share the backend multi-agent system (agents + commands) via git,
+# but keep machine-local settings (settings.local.json, *.lock) ignored.
+!backend/.claude/
+backend/.claude/*
+!backend/.claude/agents/
+!backend/.claude/commands/
+
+# Local smoke-test output from HVAC template
+src/website-gen/templates/hvac/smoke-out/
+
+# Local smoke-test output from real-estate template
+src/website-gen/templates/real-estate/smoke-out/
+
+# Next.js incremental TypeScript build info
+landing/tsconfig.tsbuildinfo
+landing/.next/
+
+# WhatsApp Flow RSA keys (never commit)
+scripts/flows/.keys/
+
+# local test artifact (form screenshot)
+form.jpeg
+
+# Pixie backend — OAuth token store (contains Google tokens)
+backend/.integrations_store.json

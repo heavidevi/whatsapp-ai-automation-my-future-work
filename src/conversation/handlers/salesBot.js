@@ -1,0 +1,1610 @@
+const { sendTextMessage, sendCTAButton, sendImage } = require('../../messages/sender');
+const { logMessage, getConversationHistory } = require('../../db/conversations');
+const { generateResponse } = require('../../llm/provider');
+const { classifyIntent } = require('../../llm/intentClassifier');
+const { buildSalesPrompt } = require('../../llm/prompts');
+const { formatWhatsApp } = require('../../utils/formatWhatsApp');
+const { updateUserMetadata } = require('../../db/users');
+const { detectSecrets, validateBusinessName } = require('../../utils/validators');
+const { classifyIndustry } = require('../../utils/industryClassifier');
+
+// Internal-signal tag the LLM appends when it spots an injection attempt,
+// pasted secret, etc. The set must stay in sync with the prompt section
+// "INPUT SAFETY & SECURITY" in src/llm/prompts.js — anything outside this
+// set is dropped (so a hallucinated label can't poison user metadata).
+const ALLOWED_SECURITY_FLAGS = new Set([
+  'prompt_injection_attempt',
+  'credential_or_secret_in_message',
+  'pii_dump',
+  'repeated_identical_messages',
+  'sudden_topic_shift_to_admin_or_internal',
+  'request_for_other_user_data',
+  'suspected_automation',
+]);
+const { logger } = require('../../utils/logger');
+const { STATES } = require('../states');
+const { env } = require('../../config/env');
+const { saveLeadSummary } = require('../../db/leadSummaries');
+const { buildSummaryContext } = require('../summaryManager');
+const { hydrateWebsiteData } = require('../entityAccumulator');
+const { localize } = require('../../utils/localizer');
+const { dynamicPhrase } = require('../../utils/dynamicPhrase');
+const { normalizeBusinessName } = require('../../utils/normalizeName');
+const { isServiceEnabled, findServiceByKey } = require('../../config/services');
+const { handoffToHuman } = require('../handoff');
+
+// Static screenshots of the 4 branded demo sites — sent ahead of any
+// chat message that includes the sample preview URL. Vercel serves these
+// from landing/public/<file>.png. Industry key is normalized (e.g.
+// "real-estate" / "Real Estate" → "real_estate") before lookup.
+const SAMPLE_SCREENSHOT_URLS = {
+  salon: 'https://pixiebot.co/salon.png',
+  hvac: 'https://pixiebot.co/HVAC.png',
+  real_estate: 'https://pixiebot.co/Real-Estate.png',
+  generic: 'https://pixiebot.co/generic.png',
+};
+// `portfolio` / `portfolio_<subtype>` screenshots come from the portfolio-demo
+// registry (developer is live; designer/photographer/writer ship later).
+const { resolvePortfolioDemo, isPortfolioToken, liveSubtypes } = require('../portfolioDemos');
+function getSampleScreenshotUrl(industry) {
+  const key = String(industry || '').toLowerCase().replace(/[-\s]+/g, '_');
+  if (isPortfolioToken(key)) return resolvePortfolioDemo(key).screenshotUrl;
+  return SAMPLE_SCREENSHOT_URLS[key] || SAMPLE_SCREENSHOT_URLS.generic;
+}
+
+// Trade / industry words that should NEVER appear as a business "name" in
+// the trigger tag — when the LLM grabs e.g. "Salon" off "I have a salon"
+// and passes it as name, the wizard builds a site branded "Welcome to
+// Salon". Block it server-side so we re-ask the user for a real name.
+// Match is case-insensitive; whole-word; allows simple plurals.
+const TRADE_WORDS = new Set([
+  'salon', 'salons', 'hair salon', 'beauty salon', 'barber', 'barbershop', 'barbers',
+  'plumber', 'plumbers', 'plumbing', 'hvac', 'electrician', 'electricians', 'electrical',
+  'landscaper', 'landscapers', 'landscaping', 'roofer', 'roofers', 'roofing',
+  'cleaner', 'cleaners', 'cleaning',
+  'restaurant', 'restaurants', 'cafe', 'café', 'coffee shop', 'bakery',
+  'shop', 'store', 'retail', 'boutique',
+  'realtor', 'real estate', 'real-estate', 'agent', 'real estate agent',
+  'doctor', 'dentist', 'clinic', 'gym', 'studio',
+  'business', 'company', 'service', 'services',
+]);
+function isTradeWord(s) {
+  const norm = String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return TRADE_WORDS.has(norm);
+}
+
+/**
+ * Extract and strip the [LEAD_BRIEF]...[/LEAD_BRIEF] block from the LLM response.
+ * Returns { leadBrief: string|null, cleanText: string }
+ */
+/**
+ * Build a compact "KNOWN FACTS" block for the sales prompt from whatever
+ * entity info we've accumulated into metadata. Injecting this into the
+ * system prompt lets the LLM skip re-asking for things the user already
+ * said — and trust that the wizard can start with these values pre-filled
+ * if they trigger the website demo.
+ */
+function buildKnownContext(user) {
+  const wd = user?.metadata?.websiteData || {};
+  const md = user?.metadata || {};
+  const entries = [];
+  if (wd.businessName) entries.push(`- Business name: ${wd.businessName}`);
+  if (wd.industry) entries.push(`- Industry: ${wd.industry}`);
+  if (wd.primaryCity) entries.push(`- City: ${wd.primaryCity}`);
+  if (Array.isArray(wd.services) && wd.services.length) {
+    entries.push(`- Services: ${wd.services.slice(0, 5).join(', ')}`);
+  }
+  if (wd.contactEmail) entries.push(`- Email: ${wd.contactEmail}`);
+  if (wd.contactPhone) entries.push(`- Phone: ${wd.contactPhone}`);
+  if (wd.contactAddress) entries.push(`- Address: ${wd.contactAddress}`);
+
+  if (!entries.length && !md.paymentConfirmed) return '';
+
+  // Surface delivered/paid state so the LLM stops re-pitching the same
+  // service on a returning post-payment user. Without this, it has been
+  // observed responding to a generic returning "hi" with "love it! i'll
+  // activate your site now and send the live link..." — a hallucinated
+  // flow we don't even run.
+  let deliveredBlock = '';
+  if (md.paymentConfirmed) {
+    const bits = [];
+    if (md.lastCompletedProjectType) bits.push(`Project type: ${md.lastCompletedProjectType}`);
+    if (md.lastBusinessName) bits.push(`Business: ${md.lastBusinessName}`);
+    if (md.paidAt) bits.push(`Paid at: ${md.paidAt}`);
+    if (md.lastPaymentAmount) bits.push(`Amount: $${Math.round(md.lastPaymentAmount / 100)}`);
+    deliveredBlock = `\n\n---\n\n## ⚠️ PROJECT ALREADY DELIVERED — DO NOT RE-PITCH
+This customer has ALREADY paid for and received their project. The site is live, the banner is gone, the work is done.
+${bits.map((b) => `- ${b}`).join('\n')}
+
+Hard rules for this turn:
+- Do NOT say things like "I'll activate your site now", "I'll send the live link", or any phrasing that implies the project is still being delivered.
+- Do NOT ask for any details that would re-trigger the same flow they already completed.
+- Do NOT emit [TRIGGER_WEBSITE_DEMO] / [TRIGGER_LOGO_MAKER] / [TRIGGER_AD_GENERATOR] / [TRIGGER_CHATBOT_DEMO] for the SAME service they already paid for.
+- DO acknowledge the delivered project briefly if it's natural to do so.
+- DO offer a complementary service (logo, ad, SEO audit, chatbot — but NOT the one they already bought) if they seem open to more work.
+- DO answer questions or accept tweak requests for the existing project.
+---
+`;
+  }
+
+  if (!entries.length) return deliveredBlock;
+
+  return `\n\n---\n\n## KNOWN FACTS ABOUT THIS CUSTOMER
+The user has already shared these details in-conversation. Do NOT re-ask for any of them. Treat them as authoritative for triggering flows:
+${entries.join('\n')}
+
+When emitting [TRIGGER_WEBSITE_DEMO], fill the structured tag from these facts so the wizard skips the corresponding steps.
+---
+${deliveredBlock}`;
+}
+
+function extractLeadBrief(text) {
+  const match = text.match(/\[LEAD_BRIEF\]([\s\S]*?)\[\/LEAD_BRIEF\]/i);
+  if (!match) return { leadBrief: null, cleanText: text };
+  const leadBrief = match[1].trim();
+  const cleanText = text.replace(/\[LEAD_BRIEF\][\s\S]*?\[\/LEAD_BRIEF\]/i, '').trim();
+  return { leadBrief, cleanText };
+}
+
+async function handleSalesBot(user, message) {
+  let text = (message.text || '').trim();
+
+  // Hard opt-out gate — once a user emits stop/unsubscribe/etc., we never
+  // message them again. WABA quality rating + every privacy regime depends
+  // on honoring this without exception. The bot is silent forever.
+  // See PIXIE_CHAT_FLOW_PLAN.md Section A.0.1.
+  if (user.metadata?.optedOut) {
+    logger.info(`[OPT_OUT] Skipping reply to ${user.phone_number} — user previously opted out`);
+    return STATES.SALES_CHAT;
+  }
+
+  if (!text) {
+    await sendTextMessage(
+      user.phone_number,
+      await localize("Hey! I didn't catch that - what can I help you with?", user, null)
+    );
+    return STATES.SALES_CHAT;
+  }
+
+  // Cap inbound text size before it reaches the LLM. The router already
+  // dropped pasted secrets via redactSecrets, but a 10KB injection prompt
+  // is no less dangerous for being non-secret. Most legitimate WhatsApp
+  // messages are under a few hundred chars; 4000 is generous for the
+  // rare paragraph-length business description.
+  const INBOUND_MAX = 4000;
+  if (text.length > INBOUND_MAX) {
+    logger.warn(`[SECURITY] Truncating inbound message from ${user.phone_number} (${text.length} chars)`);
+    text = text.slice(0, INBOUND_MAX);
+  }
+
+  // Flow-reminder opt-in: if last turn we re-sent the form and asked "want one
+  // more nudge later?", this message is the answer. Classify + record it; when
+  // they clearly answered (yes/no) reply briefly and end the turn — otherwise
+  // fall through and handle their message as a normal sales turn.
+  if (user.metadata?.awaitingReminderOptIn) {
+    try {
+      const { handleReminderOptInReply } = require('../../flows/send');
+      const ack = await handleReminderOptInReply(user, text);
+      // Only short-circuit for a short, answer-only reply ("yes" / "no thanks").
+      // A longer message (e.g. "yes, but what's your pricing?") records the
+      // preference but still falls through to a full sales answer.
+      if (ack && text.length <= 20) {
+        await sendTextMessage(user.phone_number, await localize(ack, user, text));
+        return STATES.SALES_CHAT;
+      }
+    } catch (err) {
+      logger.warn(`[FLOW-REMIND] opt-in handling failed: ${err.message}`);
+    }
+  }
+
+  // Security-flag accumulator for this turn. Sources, in order:
+  //   1. Router-level secret redaction (user._secretRedaction is set when
+  //      router.js scrubbed a key/token/JWT before this handler ran).
+  //   2. JS-side detectSecrets backstop (in case the redaction patterns
+  //      and detection patterns ever drift apart).
+  //   3. The LLM's own [SECURITY_FLAGS: ...] tag, parsed below.
+  const securityFlagSet = new Set();
+  if (user._secretRedaction || detectSecrets(text)) {
+    securityFlagSet.add('credential_or_secret_in_message');
+    logger.warn(`[SECURITY] Possible secret in message from ${user.phone_number} — not echoing back`);
+  }
+
+  // Un-stick: if websiteDemoTriggered was set in a previous turn but the
+  // demo never actually produced a preview (no site deployed), clear the
+  // flag so the next trigger attempt can fire. Without this, the LLM
+  // sometimes says "Here's your preview!" with no link — the user is
+  // trapped because the gate thinks the demo already ran.
+  if (user.metadata?.websiteDemoTriggered) {
+    try {
+      const { getLatestSite } = require('../../db/sites');
+      const latest = await getLatestSite(user.id);
+      if (!latest || !latest.preview_url) {
+        logger.info(`[SALES] websiteDemoTriggered=true but no preview_url for ${user.phone_number} — un-sticking the flag`);
+        await updateUserMetadata(user.id, { websiteDemoTriggered: false });
+        user.metadata = { ...(user.metadata || {}), websiteDemoTriggered: false };
+      }
+    } catch (err) {
+      logger.warn(`[SALES] Stuck-flag check failed: ${err.message}`);
+    }
+  }
+
+  // The router already classified the user's message via
+  // classifyFeedbackSignals(... { includeSales: true }) and stashed the
+  // result on user._classifiedIntents — so we pick up notInterested /
+  // agreed without paying for a second LLM round-trip. Defensive fallback
+  // for the rare path that bypasses the router (tester accounts, manual
+  // invocations) — it self-classifies in that case so behavior is
+  // identical, just one call slower.
+  let userIntents = user._classifiedIntents;
+  if (!userIntents || typeof userIntents.notInterested !== 'boolean') {
+    userIntents = await classifyIntent(text, {
+      notInterested: 'User is opting out of further contact: wants follow-ups stopped, doesn\'t want to be messaged, or is firmly declining the service ("not interested", "stop messaging", "I\'m good thanks", "no need", "leave me alone", "don\'t contact me", "unsubscribe", "maybe later but stop bugging me"). Do NOT match if the user is just asking on behalf of someone else, declining one specific suggestion while still engaged, or simply unsure.',
+      agreed: 'User is affirming or agreeing to proceed with what was just offered or asked. Match liberally: "yes", "yeah", "sure", "ok", "sounds good", "let\'s do it", "I\'m in", "go ahead", "deal", "perfect", "alright", and equivalents in any language including Roman Urdu/Hindi ("haan", "theek hai", "chalo"). Do NOT match plain greetings or unrelated answers.',
+    }, { userId: user.id, operation: 'sales_user_intent' });
+  }
+
+  if (userIntents.notInterested && !user.metadata?.followupOptOut) {
+    await updateUserMetadata(user.id, { followupOptOut: true });
+    await sendTextMessage(
+      user.phone_number,
+      await localize(
+        "No worries at all! I won't follow up further. If you ever change your mind, just send a message and I'll be here. Have a great day!",
+        user,
+        text
+      )
+    );
+    await logMessage(user.id, 'User not interested — follow-ups stopped', 'assistant');
+    saveLeadSummary(user, 'opted_out', 'User said not interested — follow-ups stopped').catch(() => {});
+    return STATES.SALES_CHAT;
+  }
+
+  // Extract any website-relevant entities the user just dropped into sales
+  // chat (business name, industry, city, email, phone, address, services).
+  // Storing them here means the website-demo trigger can pre-fill the wizard
+  // without having to re-ask the user for things they already said, and the
+  // LLM itself gets told about them via buildKnownContext below so it stops
+  // asking "what's your business called?" when the user already said it.
+  try {
+    const { updatedUser, captured } = await hydrateWebsiteData(user, text);
+    if (captured.length) {
+      logger.info(`[SALES] Hydrated from sales-chat message: ${captured.join(', ')}`);
+      user = updatedUser;
+    }
+  } catch (err) {
+    logger.warn(`[SALES] Entity hydration failed: ${err.message}`);
+  }
+
+  // Get conversation history (last 40 messages for full context).
+  // Pass afterTimestamp so /reset gives a clean slate — pre-reset
+  // messages stay in the DB for admin but are invisible to the LLM.
+  //
+  // Degrade, don't crash: getConversationHistory throws on a transient Supabase
+  // read error. Unwrapped, that aborted the ENTIRE turn before any reply, and
+  // the router surfaced the generic "something glitched" fallback — a dead end
+  // for the user. Fall back to an empty window instead: the LLM still receives
+  // the persisted KNOWN FACTS + long-term summary blocks built below (both from
+  // metadata, not this read), so it keeps context and the user gets a real reply.
+  let history = [];
+  try {
+    history = await getConversationHistory(user.id, 40, {
+      afterTimestamp: user.metadata?.lastResetAt || null,
+    });
+  } catch (err) {
+    logger.warn(`[SALES] history read failed — proceeding with empty window: ${err.message}`);
+  }
+
+  // Entry turn — the bot hasn't spoken yet this (post-reset) session.
+  // We test for the absence of any assistant turn rather than an empty
+  // history: the inbound message is logged to `conversations` by the
+  // router BEFORE this handler runs, so it's already in `history` and
+  // `history.length === 0` is never true on a real turn.
+  const isFirstTurn = !history.some((h) => h.role === 'assistant');
+
+  // First message ever - let the LLM generate the greeting so it matches
+  // the user's language and tone from their very first message.
+  // (No hardcoded English greeting - the system prompt instructs the LLM
+  // on how to greet based on ad source and user language.)
+
+  const messages = history.map((h) => ({
+    role: h.role,
+    content: h.message_text,
+  }));
+
+  // Add the current user message
+  messages.push({ role: 'user', content: text });
+
+  // Determine ad source + ad industry from user metadata (set by router.js
+  // when the inbound message carries a Meta `referral` payload from a
+  // click-to-WhatsApp ad). adIndustry drives which preview-site URL the
+  // greeting uses (salon / hvac / real-estate / generic fallback).
+  const adSource = user.metadata?.adSource || 'generic';
+  const adIndustry = user.metadata?.adIndustry || 'generic';
+
+  // Lever-rotation state — the prompt tells the LLM which lever names it
+  // used in its last 1-2 assistant turns so it picks a different one this
+  // turn. See PIXIE_CHAT_FLOW_PLAN.md Section B "Lever rotation rule".
+  const recentLevers = Array.isArray(user.metadata?.recentLevers) ? user.metadata.recentLevers.slice(-2) : [];
+
+  let systemPrompt = buildSalesPrompt(env.calendlyUrl, env.portfolio, adSource, adIndustry, recentLevers);
+  systemPrompt += buildSummaryContext(user);
+  systemPrompt += buildKnownContext(user);
+
+  // When the user has switched to voice replies, the LLM's text is read aloud
+  // as a voice note (TTS) at the sender. Without this note the model doesn't
+  // know that and sometimes denies the capability ("I can only type here, not
+  // send voice notes") — which is now false. Tell it the truth.
+  try {
+    const { getVoiceMode } = require('../../messages/channelContext');
+    if (getVoiceMode()) {
+      systemPrompt +=
+        '\n\n---\n\n## VOICE MODE ACTIVE\nYour replies are right now being delivered to the user as SPOKEN VOICE NOTES (text-to-speech) — you ARE talking, not typing. NEVER say you can only type or that you cannot send voice/audio. Do not mention this mechanism or the word "TTS"; just speak naturally. Favor shorter, conversational sentences that sound good read aloud.';
+    }
+  } catch { /* defensive — never break a turn over the context read */ }
+
+  // If we just ran an SEO audit, inject the findings so the bot can pitch based on real data
+  const seoAnalysis = user.metadata?.lastSeoAnalysis;
+  if (seoAnalysis) {
+    systemPrompt += `\n\n---\n\n## SEO AUDIT CONTEXT\n\nYou just ran a live SEO audit on the client's website (${user.metadata?.lastSeoUrl || 'their site'}). The full report has been sent as a PDF. Here are the findings:\n\n${seoAnalysis.slice(0, 2000)}\n\n**Use these specific findings to pitch the right SEO package.** Reference their actual issues - don't be generic. Show them exactly what's broken and how the package you're recommending fixes it. This is your strongest closer - you have real data, use it.`;
+  }
+
+  let rawResponse;
+  try {
+    rawResponse = await generateResponse(systemPrompt, messages, {
+      userId: user.id,
+      operation: 'sales_chat',
+    });
+  } catch (error) {
+    logger.error('Sales bot LLM error:', error);
+    await sendTextMessage(
+      user.phone_number,
+      await dynamicPhrase("Sorry, something went wrong on my end. Give me a moment and try again.", user, message?.text || '')
+    );
+    return STATES.SALES_CHAT;
+  }
+
+  // Extract lead brief if qualification is complete
+  const { leadBrief, cleanText } = extractLeadBrief(rawResponse);
+
+  if (leadBrief && !user.metadata?.leadBriefSent) {
+    logger.info(`[LEAD BRIEF] ${user.phone_number}:\n${leadBrief}`);
+    // Extract lead temperature from the brief
+    const tempMatch = leadBrief.match(/Lead temperature:\s*(HOT|WARM|COLD)/i);
+    const leadTemperature = tempMatch ? tempMatch[1].toUpperCase() : 'WARM';
+    // Extract closing technique if mentioned
+    const closeMatch = leadBrief.match(/Closing technique used:\s*(.+)/i);
+    const closingTechnique = closeMatch ? closeMatch[1].trim() : null;
+    // Persist in metadata so we only log it once
+    await updateUserMetadata(user.id, {
+      leadBriefSent: true,
+      leadBrief,
+      leadTemperature,
+      ...(closingTechnique && closingTechnique !== 'N/A' ? { closingTechnique } : {}),
+    });
+  }
+
+  // Check for trigger tags before sending the response.
+  // Website trigger supports three forms:
+  //   1. Bare:       [TRIGGER_WEBSITE_DEMO]
+  //   2. Plain name: [TRIGGER_WEBSITE_DEMO: BytesMobile]
+  //   3. Structured: [TRIGGER_WEBSITE_DEMO: name="X"; industry="Y"; services="A, B"]
+  // The structured form lets the wizard skip steps the LLM already heard
+  // answers for, so the user isn't asked again for things they already said.
+  const websiteDemoMatch = cleanText.match(/\[TRIGGER_WEBSITE_DEMO(?::\s*([^\]]*))?\]/i);
+  let websiteDemoTrigger = !!websiteDemoMatch;
+  let websiteDemoBusinessName = null;
+  let websiteDemoIndustry = null;
+  let websiteDemoServices = null;
+  if (websiteDemoMatch && websiteDemoMatch[1]) {
+    const payload = websiteDemoMatch[1].trim();
+    const isStructured = /[;=]/.test(payload);
+    const clean = (v) => {
+      const x = String(v || '').trim().replace(/^["']|["']$/g, '').trim();
+      return x && !/^unknown$/i.test(x) ? x : null;
+    };
+    if (isStructured) {
+      for (const pair of payload.split(/;\s*/)) {
+        const eq = pair.indexOf('=');
+        if (eq < 0) continue;
+        const key = pair.slice(0, eq).trim().toLowerCase();
+        const val = clean(pair.slice(eq + 1));
+        if (!val) continue;
+        if (key === 'name' || key === 'business') {
+          // Drop the field on validation failure rather than blocking the
+          // whole trigger — the wizard will re-ask for what's missing.
+          // Also reject when the LLM passed the TRADE (industry word) as
+          // the business name — that's a known LLM error that ships sites
+          // branded "Welcome to Salon" instead of the real business name.
+          const v = validateBusinessName(val);
+          if (v.ok && v.value.length <= 60 && !isTradeWord(v.value)) {
+            websiteDemoBusinessName = v.value;
+          } else if (v.ok && isTradeWord(v.value)) {
+            logger.warn(`[SALES] Dropping trade-word business name from trigger tag: "${v.value}" — will re-ask user`);
+          } else {
+            logger.warn(`[SALES] Dropping invalid business name from trigger tag (${v.ok ? 'too_long_for_trigger' : v.reason})`);
+          }
+        } else if (key === 'industry' || key === 'niche') {
+          if (val.length <= 40) websiteDemoIndustry = val;
+        } else if (key === 'services' || key === 'service') {
+          websiteDemoServices = val
+            .split(/\s*,\s*|\s+(?:and|&)\s+/i)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (!websiteDemoServices.length) websiteDemoServices = null;
+        }
+      }
+    } else {
+      const name = clean(payload);
+      if (name) {
+        const v = validateBusinessName(name);
+        if (v.ok && v.value.length <= 60 && !isTradeWord(v.value)) {
+          websiteDemoBusinessName = v.value;
+        } else if (v.ok && isTradeWord(v.value)) {
+          logger.warn(`[SALES] Dropping trade-word bare name from trigger tag: "${v.value}" — will re-ask user`);
+        } else {
+          logger.warn(`[SALES] Dropping invalid bare business name from trigger tag (${v.ok ? 'too_long_for_trigger' : v.reason})`);
+        }
+      }
+    }
+  }
+  // Strip generic industry-echo services ("plumbing services" when industry
+  // is "Plumbing"). The LLM that emits the trigger tag often restates the
+  // user's vague answer verbatim, which blocks the trade template's
+  // default-services list from kicking in downstream. This mirrors the
+  // same filter in entityAccumulator.extractWebsiteFields for the
+  // extractor path — without it, the salesBot path skips that safety net.
+  if (Array.isArray(websiteDemoServices) && websiteDemoServices.length > 0) {
+    const industryWord = String(websiteDemoIndustry || '').trim().toLowerCase();
+    if (industryWord) {
+      const stripSuffix = (s) => String(s || '').toLowerCase()
+        .replace(/\s+(services?|work|stuff|things)\s*$/i, '')
+        .trim();
+      const allEcho = websiteDemoServices.every((s) => {
+        const normalized = stripSuffix(s);
+        return (
+          normalized === '' ||
+          normalized === industryWord ||
+          industryWord.includes(normalized) ||
+          normalized.includes(industryWord)
+        );
+      });
+      if (allEcho) {
+        logger.info(`[SALES] Dropping generic services echo ${JSON.stringify(websiteDemoServices)} for industry "${industryWord}" — trade defaults will fill in`);
+        websiteDemoServices = null;
+      }
+    }
+  }
+  // Meta-word filter: when the user says something like "yes my projects"
+  // in response to "what should the site highlight?", the LLM emits
+  // services=["projects"] from the trigger tag — but "projects" is a
+  // META-reference (a website section), not an actual skill or service.
+  // Same for "work" / "cases" / "case studies" / "portfolio". Drop these
+  // so the downstream skills step asks the user properly. Only fires
+  // when the WHOLE list is meta-words; mixed lists ("Figma, projects")
+  // would land at the per-entry filter below.
+  if (Array.isArray(websiteDemoServices) && websiteDemoServices.length > 0) {
+    const metaWords = new Set(['projects', 'project', 'work', 'works', 'cases', 'case studies', 'case study', 'portfolio', 'samples', 'examples']);
+    const allMeta = websiteDemoServices.every((s) => metaWords.has(String(s || '').toLowerCase().trim()));
+    if (allMeta) {
+      logger.info(`[SALES] Dropping meta-word services ${JSON.stringify(websiteDemoServices)} — these are website-section references, not actual skills`);
+      websiteDemoServices = null;
+    } else {
+      // Mixed list: drop only the meta entries, keep the rest.
+      const filtered = websiteDemoServices.filter((s) => !metaWords.has(String(s || '').toLowerCase().trim()));
+      if (filtered.length !== websiteDemoServices.length) {
+        logger.info(`[SALES] Stripped meta-word entries from services list — kept ${JSON.stringify(filtered)}`);
+        websiteDemoServices = filtered.length ? filtered : null;
+      }
+    }
+  }
+  let chatbotDemoTrigger = cleanText.includes('[TRIGGER_CHATBOT_DEMO]');
+  let adGeneratorTrigger = cleanText.includes('[TRIGGER_AD_GENERATOR]');
+  let logoMakerTrigger = cleanText.includes('[TRIGGER_LOGO_MAKER]');
+  const seoAuditMatch = cleanText.match(/\[TRIGGER_SEO_AUDIT:\s*(.+?)\]/);
+  // New handoff trigger — emitted by the LLM when the user asks for a
+  // service this chat doesn't currently handle. Payload is a free-form
+  // service label ("chatbot", "SEO audit", "ad design", etc.).
+  const humanHandoffMatch = cleanText.match(/\[TRIGGER_HUMAN_HANDOFF:\s*([^\]]+)\]/i);
+
+  // [LEVER: <name>] — emitted by the LLM at the end of every reply, names
+  // the persuasion lever used (Reciprocity, Curiosity gap, Authority, etc.).
+  // See PIXIE_CHAT_FLOW_PLAN.md Section B. Stripped from text before send;
+  // stored in metadata.recentLevers so the NEXT prompt build can ban it.
+  const leverMatch = cleanText.match(/\[LEVER:\s*([^\]]+)\]/i);
+  const leverThisTurn = leverMatch ? leverMatch[1].trim() : null;
+
+  // [OPT_OUT] — user said stop/unsubscribe/block. The LLM emits the tag,
+  // we record permanent opt-out and silence the bot for this user. The
+  // single polite acknowledgment in the same response is the LAST message
+  // they'll ever get from us. See PIXIE_CHAT_FLOW_PLAN.md Section A.0.1.
+  const optOutRequested = /\[OPT_OUT\]/i.test(cleanText);
+
+  // [SEND_SAMPLE_IMAGE: industry=salon] — LLM emits this whenever it
+  // shares a sample preview URL (in the first greeting, or when a user
+  // asks for examples mid-chat). We send the matching screenshot as a
+  // WhatsApp image right before the text reply. The LLM can emit the
+  // tag multiple times in one message (e.g. two samples when the user
+  // hasn't disclosed their industry yet) — we collect all of them and
+  // send each image in order. De-duped so the same industry never
+  // sends twice in one turn.
+  const sampleImageMatches = Array.from(
+    cleanText.matchAll(/\[SEND_SAMPLE_IMAGE(?::\s*industry=([a-z_]+))?\]/gi)
+  );
+  const sampleImageIndustries = [];
+  for (const m of sampleImageMatches) {
+    const ind = (m[1] || adIndustry || 'generic').toLowerCase();
+    if (!sampleImageIndustries.includes(ind)) sampleImageIndustries.push(ind);
+  }
+  // Fallback: if the LLM included a known demo URL but forgot the tag,
+  // detect the URL and add the matching industry so the image still sends.
+  const DEMO_URL_INDUSTRY = {
+    'blushbar.pixiebot.co': 'salon',
+    'austinclimate.pixiebot.co': 'hvac',
+    'sarahmitchell.pixiebot.co': 'real_estate',
+    'bytecoffee.pixiebot.co': 'generic',
+  };
+  // Live portfolio sub-type demos map their host → `portfolio_<subtype>` so a
+  // forgotten tag still attaches the right screenshot (registry-driven).
+  for (const s of liveSubtypes()) {
+    DEMO_URL_INDUSTRY[s.previewUrl.replace(/^https?:\/\//, '')] = `portfolio_${s.key}`;
+  }
+  for (const [host, ind] of Object.entries(DEMO_URL_INDUSTRY)) {
+    if (cleanText.includes(host) && !sampleImageIndustries.includes(ind)) {
+      sampleImageIndustries.push(ind);
+    }
+  }
+
+  // Internal-signal tag from the INPUT SAFETY section of the prompt. The
+  // LLM appends [SECURITY_FLAGS: <comma,labels>] when it detects injection
+  // attempts, pasted secrets, requests for other users' data, etc. We
+  // intersect with the allow-set so a hallucinated label can't sneak into
+  // user metadata. The tag is stripped from the user-visible reply below.
+  const securityFlagsMatch = cleanText.match(/\[SECURITY_FLAGS:\s*([^\]]+)\]/i);
+  if (securityFlagsMatch) {
+    for (const raw of securityFlagsMatch[1].split(',')) {
+      const label = raw.trim().toLowerCase();
+      if (ALLOWED_SECURITY_FLAGS.has(label)) {
+        securityFlagSet.add(label);
+      } else if (label) {
+        logger.debug(`[SECURITY] Dropping unknown flag label from LLM: "${label}"`);
+      }
+    }
+  }
+
+  // Stitch the recent conversation + bot reply into one snippet so the
+  // topic classifier sees both sides. We trim to the last few turns —
+  // older history rarely changes the topic and just adds tokens.
+  const recentConv = messages.slice(-8).map((m) => `${m.role}: ${m.content}`).join('\n');
+  const conversationSnippet = `${recentConv}\nassistant: ${cleanText}`;
+
+  // Two parallel classifier calls:
+  //   - botSpeech: what is the bot's latest reply offering / committing to?
+  //   - convTopic: what is the conversation as a whole about?
+  // Splitting them keeps each prompt focused. The user-intent call already
+  // ran earlier (userIntents.agreed is the LLM-classified equivalent of
+  // the old `userAgreed` regex).
+  const [botSpeech, convTopic] = await Promise.all([
+    classifyIntent(cleanText, {
+      offersWebsite: 'The bot is OFFERING (not yet committing) to build, generate, create, deploy, set up, or spin up a website / site / landing page / preview for the user — phrasings like "want me to build you one?", "I can spin up a preview", "happy to put together a site". Set to false if the bot has already committed or claimed it\'s done. Set to false for general statements about what the company does ("we build websites", "right now I\'m building websites"). The offer must be directed at the user.',
+      commitsToWebsite: 'The bot has already COMMITTED to building THIS USER\'S specific website preview RIGHT NOW, with phrasing that implies the demo is in motion. Match these: "building your preview now", "spinning up your site", "I\'ll spin one up for you", "let me put together your preview", "here\'s your preview", "the site is ready/built/live". Do NOT match general descriptions of what the company does: "we build websites" / "right now I\'m building websites" / "I help businesses with websites" — those are statements of company focus, not commitments to a specific user. The match requires SPECIFIC USER COMMITMENT phrased as if the demo is already in motion, not a general offer or company description.',
+      offersAdDemo: 'The bot is offering to design, generate, create, build, make, craft, or prepare a marketing ad, ad creative, ad image, ad post, or social-media ad for the user.',
+      offersLogoDemo: 'The bot is offering to design, generate, create, build, sketch, or prepare a logo, brand mark, brand identity, or brand concept for the user.',
+      mentionsPayment: 'The bot is sending or about to send a payment link, asking the user to pay now, complete payment, lock it in, or saying "here\'s the link" in a payment context.',
+    }, { userId: user.id, operation: 'sales_bot_speech' }),
+
+    classifyIntent(conversationSnippet, {
+      aboutChatbot: 'The conversation is centered on a chatbot, AI assistant, virtual assistant, or AI chat being built for the user\'s business.',
+      aboutAds: 'The conversation is centered on creating marketing ads, ad creatives, ad images, ad posts, or social-media ads (Instagram/Facebook/TikTok ads, "ad banade", "post banade", etc.).',
+      aboutLogo: 'The conversation is centered on designing a logo, brand mark, or brand identity ("logo banade", "logo maker", etc.).',
+    }, { userId: user.id, operation: 'sales_conv_topic' }),
+  ]);
+
+  logger.debug(`[SALES] Trigger check - websiteTag: ${websiteDemoTrigger}, chatbotTag: ${chatbotDemoTrigger}, adTag: ${adGeneratorTrigger}, logoTag: ${logoMakerTrigger}, seoTag: ${!!seoAuditMatch}, websiteTriggered: ${!!user.metadata?.websiteDemoTriggered}, chatbotTriggered: ${!!user.metadata?.chatbotDemoTriggered}, adTriggered: ${!!user.metadata?.adGeneratorTriggered}, logoTriggered: ${!!user.metadata?.logoMakerTriggered}, seoTriggered: ${!!user.metadata?.seoAuditTriggered}`);
+  logger.debug(`[SALES] LLM response (first 200): ${cleanText.slice(0, 200)}`);
+
+  const userAgreed = userIntents.agreed;
+  const isChatbotContext = convTopic.aboutChatbot;
+
+  // CHATBOT DEMO: Two-phase detection.
+  // Phase 1: When user agrees to the chatbot demo, mark intent in metadata.
+  // Phase 2: When user sends their business name (next message), trigger the flow.
+  if (!chatbotDemoTrigger && !user.metadata?.chatbotDemoTriggered && isChatbotContext) {
+    if (user.metadata?.chatbotDemoAgreed) {
+      // Phase 2: User already agreed, this message is likely their business name - trigger now
+      chatbotDemoTrigger = true;
+      logger.info(`[SALES] Chatbot demo trigger: user previously agreed, triggering on business name`);
+    } else if (userAgreed) {
+      // Phase 1: User just agreed - mark it, let the LLM ask for business name
+      await updateUserMetadata(user.id, { chatbotDemoAgreed: true });
+      logger.info(`[SALES] Chatbot demo: user agreed, will trigger on next message`);
+    }
+  }
+
+  // Website fallback (two-gate, matching the old regex pair):
+  //   Gate A — bot OFFERED a website AND the user agreed.
+  //   Gate B — bot COMMITTED/CLAIMED a preview is happening (no agreement needed —
+  //            the bot already locked in, otherwise the user stalls staring at
+  //            a "preview" that was never actually generated).
+  // Skipped entirely if the conversation is about a chatbot, to avoid stealing
+  // chatbot leads.
+  const botTalksAboutWebsite = !isChatbotContext && botSpeech.offersWebsite;
+  const botCommittedWebsite = !isChatbotContext && botSpeech.commitsToWebsite;
+
+  logger.debug(`[SALES] Fallback check - isChatbotContext: ${isChatbotContext}, chatbotAgreed: ${!!user.metadata?.chatbotDemoAgreed}, botOffersWebsite: ${botTalksAboutWebsite}, botCommittedWebsite: ${botCommittedWebsite}, userAgreed: ${userAgreed}`);
+
+  if (
+    !websiteDemoTrigger &&
+    !user.metadata?.websiteDemoTriggered &&
+    !chatbotDemoTrigger &&
+    ((botTalksAboutWebsite && userAgreed) || botCommittedWebsite)
+  ) {
+    websiteDemoTrigger = true;
+    if (botCommittedWebsite) {
+      logger.info(`[SALES] Hard-commit fallback: LLM promised/claimed a preview without emitting trigger tag`);
+    } else {
+      logger.info(`[SALES] Fallback: website demo trigger detected for ${user.phone_number}`);
+    }
+  }
+
+  // Ad generator fallback: bot offered an ad demo OR user agreed in an ad-context conversation.
+  if (
+    !adGeneratorTrigger &&
+    !user.metadata?.adGeneratorTriggered &&
+    !websiteDemoTrigger &&
+    !chatbotDemoTrigger &&
+    convTopic.aboutAds &&
+    (botSpeech.offersAdDemo || userAgreed)
+  ) {
+    adGeneratorTrigger = true;
+    logger.info(`[SALES] Fallback: ad generator trigger detected for ${user.phone_number}`);
+  }
+
+  // Logo maker fallback: bot offered a logo demo OR user agreed in a logo-context conversation.
+  if (
+    !logoMakerTrigger &&
+    !user.metadata?.logoMakerTriggered &&
+    !websiteDemoTrigger &&
+    !chatbotDemoTrigger &&
+    !adGeneratorTrigger &&
+    convTopic.aboutLogo &&
+    (botSpeech.offersLogoDemo || userAgreed)
+  ) {
+    logoMakerTrigger = true;
+    logger.info(`[SALES] Fallback: logo maker trigger detected for ${user.phone_number}`);
+  }
+
+  // Fallback: if the user sent a URL and conversation is about SEO but LLM forgot the tag
+  let seoAuditFallbackUrl = null;
+  const userHasUrl = /https?:\/\/[^\s]+/i.test(text);
+  const responseHasSeoKeyword = /\b(seo|audit|analyz|rank|google)\b/i.test(rawResponse);
+  logger.debug(`[SALES] SEO fallback check - userHasUrl: ${userHasUrl}, responseHasSeoKeyword: ${responseHasSeoKeyword}, seoTriggered: ${!!user.metadata?.seoAuditTriggered}`);
+
+  if (
+    !seoAuditMatch &&
+    !user.metadata?.seoAuditTriggered &&
+    responseHasSeoKeyword &&
+    userHasUrl
+  ) {
+    const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+    if (urlMatch) {
+      seoAuditFallbackUrl = urlMatch[0];
+      logger.info(`Fallback: SEO audit trigger detected for ${user.phone_number}: ${seoAuditFallbackUrl}`);
+    }
+  }
+
+  // Check for payment trigger tag
+  let paymentMatch = cleanText.match(/\[SEND_PAYMENT:\s*amount=(\d+),\s*service=(\w+),\s*tier=(\w+),\s*description=([^\]]+)\]/i);
+
+  // Fallback: if the LLM mentions payment/link/pay but forgot the tag, try to extract price info.
+  // botSpeech.mentionsPayment + userIntents.agreed reuse the classifier results above.
+  // Price extraction stays as a regex — "$<digits>" is a structured token, not natural language.
+  if (!paymentMatch && !user.metadata?.lastPaymentLinkId) {
+    const priceInResponse = cleanText.match(/\$(\d{2,4})\b/);
+
+    if (botSpeech.mentionsPayment && priceInResponse && userIntents.agreed) {
+      const amount = priceInResponse[1];
+      // Try to detect service type from conversation
+      const convText = (cleanText + ' ' + messages.map(m => m.content).join(' ')).toLowerCase();
+      let service = 'website';
+      if (/\bseo\b|search engine|google rank/i.test(convText)) service = 'seo';
+      else if (/\bsmm\b|social media|instagram|facebook/i.test(convText)) service = 'smm';
+      else if (/\bapp\b|mobile app|android|ios/i.test(convText)) service = 'app';
+
+      // Detect tier from amount
+      let tier = 'custom';
+      const amt = parseInt(amount);
+      if (amt <= 200) tier = 'floor';
+      else if (amt <= 300) tier = 'starter';
+      else if (amt <= 500) tier = 'mid';
+      else if (amt <= 800) tier = 'pro';
+      else tier = 'premium';
+
+      const desc = `${service} ${tier} package`;
+      paymentMatch = [null, amount, service, tier, desc];
+      logger.info(`[SALES] Fallback: payment trigger detected - $${amount} for ${service} (${tier})`);
+    }
+  }
+
+  logger.debug(`[SALES] Payment check - tagMatch: ${!!paymentMatch}, stripeKey: ${!!env.stripe.secretKey}, alreadySent: ${!!user.metadata?.lastPaymentLinkId}`);
+
+  // Resolve which non-website service (if any) the LLM is signalling for
+  // handoff. Two paths:
+  //   1. Explicit [TRIGGER_HUMAN_HANDOFF: <label>] — the new first-class
+  //      mechanism the prompt instructs the LLM to use.
+  //   2. Legacy [TRIGGER_CHATBOT_DEMO] / [TRIGGER_AD_GENERATOR] /
+  //      [TRIGGER_LOGO_MAKER] / [TRIGGER_SEO_AUDIT: ...] — the LLM may
+  //      still emit these from older context. If the corresponding
+  //      service is currently DISABLED via src/config/services.js, route
+  //      to handoff instead of running the (now-deprecated) flow. If the
+  //      service ever gets re-enabled, these triggers fire the original
+  //      flow again with no further code changes needed.
+  let handoffServiceKey = null;
+  let handoffServiceLabel = null;
+
+  // Sanity check the LLM-emitted handoff label against what the user
+  // actually said. The LLM occasionally hallucinates a handoff for
+  // services the user never mentioned — typically when the user is
+  // just providing a business name (e.g. "Ansh Salon") and the LLM
+  // misreads it. If the user's current text shares no keyword with
+  // the handoff label, drop the trigger and let the conversation flow.
+  const isLikelyHallucinatedHandoff = (label, userText) => {
+    if (!label || !userText) return false;
+    const t = String(userText).toLowerCase();
+    const l = String(label).toLowerCase();
+    // The label's own words must appear (or a close synonym) in the user's text.
+    const labelTokens = l.split(/[\s/-]+/).filter((w) => w.length >= 3);
+    if (labelTokens.length === 0) return false;
+    // Synonyms / variants per service so we don't false-drop legit handoffs.
+    const SYNONYMS = {
+      chatbot: ['chatbot', 'chat bot', 'bot for', 'ai assistant for', 'ai chat'],
+      seo: ['seo', 'rank', 'ranking', 'google search', 'audit'],
+      logo: ['logo', 'brand mark', 'brand identity', 'branding'],
+      ad: ['ad', 'ads', 'advertis', 'creative', 'campaign'],
+      'social media': ['social', 'instagram', 'facebook', 'tiktok', 'smm'],
+      app: ['app', 'mobile app', 'android', 'ios', 'software', 'custom system'],
+      ecommerce: ['ecommerce', 'online store', 'shopify', 'shop'],
+    };
+    // If any label token matches user text → handoff is real
+    for (const tok of labelTokens) {
+      if (t.includes(tok)) return false;
+      const syns = SYNONYMS[tok] || [];
+      for (const s of syns) {
+        if (t.includes(s)) return false;
+      }
+    }
+    return true; // No match found → likely hallucination
+  };
+
+  if (humanHandoffMatch) {
+    const rawLabel = (humanHandoffMatch[1] || '').trim() || 'service';
+    // Special-case: "user_requested" is always real — emitted when the
+    // user explicitly asks for a human, never hallucinated.
+    if (rawLabel.toLowerCase() === 'user_requested') {
+      handoffServiceLabel = rawLabel;
+    } else if (isLikelyHallucinatedHandoff(rawLabel, text)) {
+      logger.warn(`[SALES] Dropping hallucinated handoff "${rawLabel}" — user text "${text.slice(0, 80)}" mentions nothing about that service`);
+    } else {
+      handoffServiceLabel = rawLabel;
+    }
+  } else if (chatbotDemoTrigger && !isServiceEnabled('chatbot')) {
+    handoffServiceKey = 'chatbot';
+  } else if (adGeneratorTrigger && !isServiceEnabled('ads')) {
+    handoffServiceKey = 'ads';
+  } else if (logoMakerTrigger && !isServiceEnabled('logo')) {
+    handoffServiceKey = 'logo';
+  } else if (seoAuditMatch && !isServiceEnabled('seo')) {
+    handoffServiceKey = 'seo';
+  }
+  // Drop any non-website demo triggers whose service is currently
+  // disabled — handoff handles them, the flow itself shouldn't fire.
+  if (chatbotDemoTrigger && !isServiceEnabled('chatbot')) chatbotDemoTrigger = false;
+  if (adGeneratorTrigger && !isServiceEnabled('ads')) adGeneratorTrigger = false;
+  if (logoMakerTrigger && !isServiceEnabled('logo')) logoMakerTrigger = false;
+  // seoAuditMatch is a const (used later); we'll gate the SEO trigger
+  // path on isServiceEnabled('seo') at the call site below instead.
+
+  // DEDUP: if we've already fired handoff for this service in this
+  // conversation, suppress this turn's handoff so the bot keeps chatting
+  // normally. The user already got the canned English message + the
+  // team already got the email. If they keep mentioning the same
+  // service, that's fine — let the LLM respond naturally without
+  // re-spamming the user or the admin inbox.
+  const handoffMarker = handoffServiceKey || handoffServiceLabel;
+  const handoffMarkerLower = handoffMarker ? String(handoffMarker).toLowerCase().trim() : null;
+  const alreadyHandedOff = handoffMarkerLower
+    && (Array.isArray(user.metadata?.handoffFiredFor) ? user.metadata.handoffFiredFor : [])
+        .some((k) => String(k).toLowerCase().trim() === handoffMarkerLower);
+  if (alreadyHandedOff) {
+    logger.info(`[HANDOFF] Dedup in salesBot: already handed off for "${handoffMarker}" this conversation — letting LLM continue normally`);
+    handoffServiceKey = null;
+    handoffServiceLabel = null;
+  }
+
+  // Strip all trigger tags from the response
+  let responseText = cleanText
+    .replace(/\[TRIGGER_WEBSITE_DEMO(?::[^\]]*)?\]/gi, '')
+    .replace(/\[TRIGGER_CHATBOT_DEMO\]/g, '')
+    .replace(/\[TRIGGER_AD_GENERATOR\]/g, '')
+    .replace(/\[TRIGGER_LOGO_MAKER\]/g, '')
+    .replace(/\[TRIGGER_SEO_AUDIT:[^\]]*\]/g, '')
+    .replace(/\[TRIGGER_HUMAN_HANDOFF:[^\]]*\]/gi, '')
+    .replace(/\[SEND_PAYMENT:[^\]]*\]/g, '')
+    .replace(/\[SECURITY_FLAGS:[^\]]*\]/gi, '')
+    .replace(/\[SEND_SAMPLE_IMAGE[^\]]*\]/gi, '')
+    .replace(/\[LEVER:[^\]]*\]/gi, '')
+    .replace(/\[OPT_OUT\]/gi, '')
+    .replace(/\[SEND_VOICE_NOTE\]/gi, '')
+    .trim();
+
+  // Persist any security flags collected this turn (from JS detectors +
+  // LLM-emitted tag). Stored under metadata.securityFlags as a per-flag
+  // { count, lastSeenAt } record so the abuse detector can read a running
+  // history. Awaited (not fire-and-forget) so the next inbound turn can't
+  // read stale metadata after the per-user lock releases.
+  if (securityFlagSet.size > 0) {
+    const nowIso = new Date().toISOString();
+    const existing = (user.metadata && user.metadata.securityFlags) || {};
+    const merged = { ...existing };
+    for (const flag of securityFlagSet) {
+      const prior = merged[flag] || { count: 0 };
+      merged[flag] = { count: (prior.count || 0) + 1, lastSeenAt: nowIso };
+    }
+    try {
+      await updateUserMetadata(user.id, { securityFlags: merged });
+      // Reflect the write back onto the in-memory user so anything later
+      // in this turn (e.g. the abuse detector) reads consistent state.
+      user.metadata = { ...(user.metadata || {}), securityFlags: merged };
+    } catch (err) {
+      logger.warn(`[SECURITY] Failed to persist flags for ${user.phone_number}: ${err.message}`);
+    }
+    logger.warn(`[SECURITY] ${user.phone_number} flags this turn: ${Array.from(securityFlagSet).join(', ')}`);
+  }
+
+  // Strip the Calendly URL from the text - we'll send it as a tappable CTA button instead
+  const calendlyUrl = env.calendlyUrl;
+  const hasCalendlyLink = responseText.includes(calendlyUrl);
+  let textWithoutLink = responseText;
+  if (hasCalendlyLink) {
+    const escapedUrl = calendlyUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Strip markdown links wrapping the Calendly URL: [any text](URL)
+    textWithoutLink = textWithoutLink.replace(new RegExp(`\\[([^\\]]*)\\]\\(${escapedUrl}\\)`, 'g'), '');
+    // Strip any remaining bare Calendly URLs
+    textWithoutLink = textWithoutLink.replace(new RegExp(escapedUrl, 'g'), '');
+    // Clean up trailing colons and whitespace
+    textWithoutLink = textWithoutLink.replace(/:\s*$/, '').trim();
+  }
+
+  // Skip sending the LLM text if a demo trigger or handoff is about to
+  // fire — the handler / handoff helper sends its own message. Website
+  // demo + handoff is the mixed-intent case: website wins this turn,
+  // handoff is queued via pendingHandoffServices below; we still skip
+  // the LLM text because the website-demo handler sends its own copy.
+  const handoffWillFire = !!(handoffServiceKey || handoffServiceLabel);
+  const skipLlmResponse = (websiteDemoTrigger && !user.metadata?.websiteDemoTriggered)
+    || (chatbotDemoTrigger && !user.metadata?.chatbotDemoTriggered)
+    || (adGeneratorTrigger && !user.metadata?.adGeneratorTriggered)
+    || (logoMakerTrigger && !user.metadata?.logoMakerTriggered)
+    || handoffWillFire;
+
+  const formatted = formatWhatsApp(textWithoutLink);
+  // Sample-screenshot send: precedes the text so the user sees the image(s)
+  // first, with the preview URL(s) appearing in the caption-equivalent text
+  // right below. Non-fatal — if WhatsApp/Messenger image send fails the
+  // text still goes out so the conversation continues.
+  if (sampleImageIndustries.length > 0 && !skipLlmResponse) {
+    for (const industry of sampleImageIndustries) {
+      try {
+        await sendImage(user.phone_number, getSampleScreenshotUrl(industry));
+      } catch (err) {
+        logger.warn(`[SAMPLE] sendImage failed (industry=${industry}): ${err.message}`);
+      }
+    }
+  }
+  if (formatted && !skipLlmResponse) {
+    // sendTextMessage auto-logs via autoLogOutbound (sender.js) — calling
+    // logMessage here would create a duplicate conversations row that
+    // surfaces as a visible duplicate in the admin transcript and as
+    // duplicated history in subsequent LLM calls.
+    await sendTextMessage(user.phone_number, formatted);
+  }
+
+  // CTWA entry: on the very first turn, follow the chat greeting with the
+  // WhatsApp Flow form as an alternative — user picks chat (type) or form
+  // (tap). One-time + CTWA-only (gated inside sendWebsiteFlowOffer via the
+  // ctwaClid + flowSentAt checks). Skipped when a demo/handoff already fired
+  // this turn (skipLlmResponse), since the user is already mid-build.
+  if (isFirstTurn && !skipLlmResponse) {
+    try {
+      const { sendWebsiteFlowOffer } = require('../../flows/send');
+      await sendWebsiteFlowOffer(user, message);
+    } catch (err) {
+      logger.warn(`[FLOW-OFFER] failed for ${user.phone_number}: ${err.message}`);
+    }
+  } else if (!skipLlmResponse) {
+    // Subsequent turns: if the user got the form offer but kept chatting without
+    // filling it, re-send it as a gentle reminder once they've sent a few more
+    // messages. Capped + opt-in-gated inside (max 2 reminders); no-op otherwise.
+    try {
+      const { maybeSendWebsiteFlowReminder } = require('../../flows/send');
+      await maybeSendWebsiteFlowReminder(user, message);
+    } catch (err) {
+      logger.warn(`[FLOW-REMIND] failed for ${user.phone_number}: ${err.message}`);
+    }
+  }
+
+  // Persist the lever this turn used so the NEXT prompt build can ban it.
+  // Keep only the most recent 2 — that matches the rotation rule in the
+  // chat-flow plan. See PIXIE_CHAT_FLOW_PLAN.md Section B.
+  if (leverThisTurn && !skipLlmResponse) {
+    const existing = Array.isArray(user.metadata?.recentLevers) ? user.metadata.recentLevers : [];
+    const nextLevers = [...existing, leverThisTurn].slice(-2);
+    try {
+      await updateUserMetadata(user.id, { recentLevers: nextLevers });
+      user.metadata = { ...(user.metadata || {}), recentLevers: nextLevers };
+      logger.info(`[LEVER] ${user.phone_number} used "${leverThisTurn}" (rolling: ${nextLevers.join(' → ')})`);
+    } catch (err) {
+      logger.warn(`[LEVER] Failed to persist lever for ${user.phone_number}: ${err.message}`);
+    }
+  }
+
+  // Opt-out: flip the optOut flag + the followup-stop flag so neither the
+  // bot nor the scheduler ever messages this user again. The single polite
+  // acknowledgment in this turn is the last message they'll get.
+  if (optOutRequested && !skipLlmResponse) {
+    try {
+      await updateUserMetadata(user.id, {
+        optedOut: true,
+        optedOutAt: new Date().toISOString(),
+        followupsStopped: true,
+      });
+      user.metadata = {
+        ...(user.metadata || {}),
+        optedOut: true,
+        optedOutAt: new Date().toISOString(),
+        followupsStopped: true,
+      };
+      await logMessage(user.id, '[OPT_OUT] User opted out — bot silenced, followups stopped', 'system');
+      logger.info(`[OPT_OUT] ${user.phone_number} opted out — bot silenced`);
+    } catch (err) {
+      logger.error(`[OPT_OUT] Failed to record opt-out for ${user.phone_number}: ${err.message}`);
+    }
+  }
+
+  // Negative-sentiment nudge — when the user's message reads as
+  // frustrated ("this is annoying", "ugh", "are you serious", etc.),
+  // append a one-time feedback channel pointer so they can vent
+  // structured-ly instead of trailing off into silent abandonment.
+  // Gated on `feedbackNudgedAt` so we don't repeat it every turn the
+  // user is venting; one nudge per user per project lifecycle is
+  // enough to plant the keyword. Skipped for testers (their feedback
+  // doesn't get logged anyway) and humanTakeover (operator is driving).
+  try {
+    const { detectFrustratedPhrasing, isTester } = require('../../feedback/feedback');
+    const alreadyNudged = !!user.metadata?.feedbackNudgedAt;
+    // Gate the (now async) frustration check behind the cheap synchronous
+    // conditions first — no point paying for a classifier call if we'd
+    // skip the nudge anyway because the user is a tester / already nudged
+    // / on humanTakeover.
+    const eligibleForNudge =
+      !skipLlmResponse &&
+      !alreadyNudged &&
+      !isTester(user) &&
+      !user.metadata?.humanTakeover;
+    if (eligibleForNudge && (await detectFrustratedPhrasing(text || ''))) {
+      const nudge = "_btw — if you wanna flag what's bugging you so the team sees it, just type *feedback* and i'll capture a note._";
+      await sendTextMessage(user.phone_number, nudge);
+      await updateUserMetadata(user.id, { feedbackNudgedAt: new Date().toISOString() });
+      user.metadata = { ...(user.metadata || {}), feedbackNudgedAt: new Date().toISOString() };
+      logger.info(`[FEEDBACK] Frustration nudge sent to ${user.phone_number}`);
+    }
+  } catch (err) {
+    logger.warn(`[FEEDBACK] Frustration-nudge hook failed: ${err.message}`);
+  }
+
+  // GDPR / first-contact disclosure DISABLED for now — to be re-enabled
+  // later once the privacy policy copy and timing are finalized. The
+  // /privacy page itself (src/privacy/routes.js) and the env config
+  // (env.privacy.*) stay in place; only the WhatsApp-side notice send
+  // is removed. To bring it back: restore the shouldSendPrivacyNotice /
+  // shouldSilentlyMarkAsDisclosed gating block above and the
+  // sendTextMessage block here.
+
+  // Send the Calendly link as a clickable CTA button so it actually works on WhatsApp
+  if (hasCalendlyLink) {
+    await sendCTAButton(
+      user.phone_number,
+      'Tap below to pick a time 👇',
+      '📅 Book a Call',
+      calendlyUrl
+    );
+    await logMessage(user.id, 'Sent Calendly booking link', 'assistant');
+
+    // Immediately follow up with an anticipation message so the user isn't
+    // left in silence after tapping the link. The Calendly webhook will still
+    // fire a separate "meeting booked" confirmation once they actually book,
+    // but this bridges the gap — especially useful if the webhook isn't set
+    // up or the invitee email/phone doesn't match their WhatsApp profile.
+    const followUp =
+      "Once you pick a time you'll get a confirmation email from Calendly with all the details. " +
+      "I'll also ping you here the moment it's booked. Looking forward to it! 🤝";
+    // sendTextMessage auto-logs (sender.js); avoid duplicate row.
+    await sendTextMessage(user.phone_number, followUp);
+
+    // Mark lead as closed - stop follow-up sequences
+    await updateUserMetadata(user.id, { leadClosed: true });
+    saveLeadSummary(user, 'meeting_booked', 'Calendly booking link sent').catch(() => {});
+  }
+
+  // Send payment link if the LLM triggered it
+  if (paymentMatch && env.stripe.secretKey) {
+    const [, amountStr, serviceType, tier, description] = paymentMatch;
+    const amount = parseInt(amountStr, 10);
+    if (amount < 10 || amount > 9999) {
+      logger.warn(`[SALES] SEND_PAYMENT amount out of range (${amount}) — skipping payment link`);
+    } else
+    try {
+      const { createPaymentLink } = require('../../payments/stripe');
+      const result = await createPaymentLink({
+        userId: user.id,
+        phoneNumber: user.phone_number,
+        amount,
+        serviceType,
+        packageTier: tier,
+        description: description.trim(),
+        customerName: user.name || '',
+      });
+
+      await sendCTAButton(
+        user.phone_number,
+        `Tap below to complete your payment of $${amount}`,
+        '💳 Pay Now',
+        result.url
+      );
+      await logMessage(user.id, `Payment link sent: $${amount} for ${serviceType} (${tier})`, 'assistant');
+      await updateUserMetadata(user.id, {
+        lastPaymentLinkId: result.linkId,
+        lastPaymentDbId: result.paymentId,
+        lastPaymentAmount: amount,
+        leadClosed: true,
+      });
+      saveLeadSummary(user, 'paid', `Payment link sent: $${amount} for ${serviceType} (${tier})`).catch(() => {});
+      logger.info(`[SALES] Payment link sent to ${user.phone_number}: $${amount} for ${serviceType}`);
+    } catch (error) {
+      logger.error('[SALES] Failed to create payment link:', error.message);
+      // Don't block the conversation - just log the error
+    }
+  }
+
+  // ── HUMAN HANDOFF (non-website services) ─────────────────────────────
+  // Two paths:
+  //   (a) Mixed-intent — website demo is ALSO firing this turn. Don't
+  //       interrupt the website flow; just stash a pendingHandoffServices
+  //       note on the user so admin sees the secondary request, mark the
+  //       service in handoffFiredFor so we don't re-email next turn, and
+  //       fire the admin email so the team can follow up about the extra
+  //       service after the website is delivered.
+  //   (b) Pure handoff — no website demo this turn. Run handoffToHuman:
+  //       it sends the user-facing English message, fires the admin
+  //       email, and records handoffFiredFor for dedupe. handoffToHuman
+  //       does NOT silence the bot — subsequent messages from the user
+  //       are still answered by the LLM as normal.
+  if (handoffWillFire) {
+    const willFireWebsite = websiteDemoTrigger && !user.metadata?.websiteDemoTriggered;
+    if (willFireWebsite) {
+      const note = handoffServiceKey || handoffServiceLabel || 'service';
+      const dedupKey = String(note).toLowerCase().trim();
+      const existingPending = Array.isArray(user.metadata?.pendingHandoffServices)
+        ? user.metadata.pendingHandoffServices
+        : [];
+      const mergedPending = existingPending.includes(note) ? existingPending : [...existingPending, note];
+      const existingFired = Array.isArray(user.metadata?.handoffFiredFor)
+        ? user.metadata.handoffFiredFor
+        : [];
+      const mergedFired = existingFired.some((k) => String(k).toLowerCase().trim() === dedupKey)
+        ? existingFired
+        : [...existingFired, dedupKey];
+      try {
+        await updateUserMetadata(user.id, {
+          pendingHandoffServices: mergedPending,
+          handoffFiredFor: mergedFired,
+        });
+        if (user.metadata) {
+          user.metadata.pendingHandoffServices = mergedPending;
+          user.metadata.handoffFiredFor = mergedFired;
+        }
+      } catch (err) {
+        logger.warn(`[HANDOFF] Failed to persist pendingHandoffServices/handoffFiredFor: ${err.message}`);
+      }
+      // Fire the admin email so the team gets notified about the extra
+      // service even though we're letting the website flow continue.
+      try {
+        const { sendHandoffNotification } = require('../../notifications/email');
+        await sendHandoffNotification({
+          userPhone: user.phone_number,
+          userName: user.name || null,
+          channel: user.channel || 'whatsapp',
+          userId: user.id,
+          serviceKey: handoffServiceKey || null,
+          serviceLabel: handoffServiceLabel || (findServiceByKey(handoffServiceKey)?.shortLabel) || 'service',
+          reason: 'mixed_intent_with_website',
+        });
+      } catch (err) {
+        logger.warn(`[HANDOFF] Mixed-intent admin notify failed: ${err.message}`);
+      }
+      logger.info(
+        `[HANDOFF] Mixed-intent: website demo firing this turn, queued handoff for "${note}" (admin notified, deduped).`
+      );
+      // Fall through — website demo block below runs as normal.
+    } else {
+      // Pure handoff — handoffToHuman sends the canned English message
+      // + admin email + records the dedupe marker. It does NOT silence
+      // the bot, so the user can keep chatting on subsequent turns.
+      // Returning here ends THIS turn (we don't also send an LLM reply
+      // — the canned handoff message is enough). Subsequent inbound
+      // messages re-enter handleSalesBot and the dedupe check above
+      // will skip re-firing handoff for the same service.
+      return handoffToHuman(user, {
+        serviceKey: handoffServiceKey || null,
+        serviceLabel: handoffServiceLabel || null,
+        reason: 'service_not_chat_handled',
+      });
+    }
+  }
+
+  // Trigger chatbot demo flow (check BEFORE website to prevent website fallback from stealing chatbot leads)
+  if (chatbotDemoTrigger && !user.metadata?.chatbotDemoTriggered) {
+    logger.info(`[SALES] Triggering chatbot demo for ${user.phone_number}`);
+    await updateUserMetadata(user.id, { chatbotDemoTriggered: true, returnToSales: true });
+
+    // Extract business name: the current message is likely the business name if it's short
+    // and not a common word. Also scan recent user messages as fallback.
+    const skipWords = /^(yes|yeah|sure|ok|okay|no|hi|hello|hey|i need|i want|chatbot|ai|website|help|please|thanks|thank you)$/i;
+    // Reject question-shaped inputs — "Which payment link" / "What about X"
+    // / "How does it work" / "Can you explain" etc. are user confusion,
+    // not business names. Without this guard we'd end up naming the
+    // chatbot after the user's question.
+    const questionStarterRx = /^(what|which|why|how|where|when|who|does|do|can|could|is|are|was|were|will|would|should|did|may|might|shall|whats|hows|whos)\b/i;
+    const looksLikeQuestion = (s) => questionStarterRx.test(s) || /[?]/.test(s);
+    let businessName = null;
+
+    // Check current message first - most likely the business name if the LLM just asked for it
+    if (text.length >= 2 && text.length <= 50 && text.split(/\s+/).length <= 6
+        && !skipWords.test(text) && !looksLikeQuestion(text)
+        && !/\b(need|want|chatbot|website|bot|help|looking|payment|link)\b/i.test(text)) {
+      businessName = text;
+    }
+
+    // Fallback: scan recent user messages
+    if (!businessName) {
+      const userMessages = messages.filter(m => m.role === 'user');
+      for (let i = userMessages.length - 1; i >= 0; i--) {
+        const msg = userMessages[i].content.trim();
+        if (msg.length >= 2 && msg.length <= 50 && msg.split(/\s+/).length <= 6
+            && !skipWords.test(msg) && !looksLikeQuestion(msg)
+            && !/\b(need|want|chatbot|website|bot|help|looking|payment|link)\b/i.test(msg)) {
+          businessName = msg;
+          break;
+        }
+      }
+    }
+
+    if (businessName) {
+      businessName = normalizeBusinessName(businessName);
+      await updateUserMetadata(user.id, {
+        chatbotData: { businessName },
+      });
+      await sendTextMessage(
+        user.phone_number,
+        await localize(
+          `Got it, building a chatbot for *${businessName}*! What industry are you in? (e.g., restaurant, dental, salon, real estate, etc.)`,
+          user,
+          text
+        )
+      );
+      await logMessage(user.id, `Chatbot demo: business name pre-filled as "${businessName}"`, 'assistant');
+      return STATES.CB_COLLECT_INDUSTRY;
+    }
+
+    await sendTextMessage(
+      user.phone_number,
+      await localize("Let's build it - what's your business name?", user, text)
+    );
+    await logMessage(user.id, 'Starting chatbot demo flow from sales', 'assistant');
+    return STATES.CB_COLLECT_NAME;
+  }
+
+  // Trigger website demo flow
+  if (websiteDemoTrigger && !user.metadata?.websiteDemoTriggered) {
+    logger.info(`[SALES] Triggering website demo for ${user.phone_number}`);
+
+    // Ad (CTWA) leads → serve the guided WhatsApp Flow form as the intake
+    // instead of the chat name-collection. The form is faster + foolproof for
+    // ad traffic, and is exactly what it was built for. Without this, the
+    // chat demo pre-empts the form whenever the opener states intent outright
+    // ("I want a website…") — the LLM fires TRIGGER_WEBSITE_DEMO, which
+    // suppresses the line-874 Flow offer. Only on the first turn; we DON'T set
+    // websiteDemoTriggered, so if the lead ignores the form and keeps typing,
+    // the chat builder can still kick in on a later turn. Falls through to the
+    // normal chat intake when the form can't be sent (non-ad lead, send error).
+    if (isFirstTurn) {
+      let flowSent = false;
+      try {
+        const { shouldOfferWebsiteFlow, sendWebsiteFlowOffer } = require('../../flows/send');
+        if (shouldOfferWebsiteFlow(user, message)) {
+          // Greeting first so the form's "Or, if it's easier…" body reads
+          // naturally — the LLM's own demo reply was suppressed upstream
+          // (skipLlmResponse), so nothing has been sent this turn yet.
+          await sendTextMessage(
+            user.phone_number,
+            await localize('Love it — I can build your site right here, no typing needed. 💚', user, text)
+          );
+          flowSent = await sendWebsiteFlowOffer(user, message);
+        }
+      } catch (err) {
+        logger.warn(`[FLOW-OFFER] CTWA intercept failed: ${err.message}`);
+      }
+      if (flowSent) {
+        logger.info(`[SALES] CTWA first turn — sent Flow form in place of chat website demo for ${user.phone_number}`);
+        return STATES.SALES_CHAT;
+      }
+    }
+
+    // Rate-limit gate: cap how many demo previews a single non-tester /
+    // non-paid user can spawn in a rolling window. We check BEFORE setting
+    // websiteDemoTriggered so the trigger can fire again later (e.g. user
+    // tries again the next day after the window resets).
+    const { checkSiteCreationAllowed, formatTimeUntil } = require('../../db/siteRateLimit');
+    const gate = await checkSiteCreationAllowed(user);
+    if (!gate.allowed) {
+      const resetIn = formatTimeUntil(gate.resetAt);
+      logger.info(
+        `[SALES] Website demo rate-limited for ${user.phone_number} — ${gate.count}/${gate.limit} sites in last ${gate.windowHours}h, resets in ${resetIn}`
+      );
+      await sendTextMessage(
+        user.phone_number,
+        await localize(
+          `You've hit the daily limit on free preview websites (${gate.limit} in ${gate.windowHours} hours). This resets in ${resetIn}.\n\nIf you'd like to keep building, you can activate one of your existing previews — just reply with the site link and I'll send you the activation link. 💡`,
+          user,
+          text
+        )
+      );
+      await logMessage(
+        user.id,
+        `Sales-bot website demo rate-limited (${gate.count}/${gate.limit}, resets in ${resetIn})`,
+        'assistant'
+      );
+      return STATES.SALES_CHAT;
+    }
+
+    await updateUserMetadata(user.id, { websiteDemoTriggered: true, returnToSales: true });
+
+    const { createSite } = require('../../db/sites');
+    const site = await createSite(user.id, 'business-starter');
+    await updateUserMetadata(user.id, { currentSiteId: site.id });
+
+    // Resolve each field in priority order:
+    //   1. Structured trigger tag (LLM just extracted it from conversation).
+    //   2. metadata.websiteData.* (hydrated from prior sales-chat turns).
+    //   3. Other flow metadata (adData / logoData / chatbotData) for name only.
+    //   4. LLM rescue — pull the name out of recent conversation. Catches
+    //      the case where the user gave a short business name ("Noman ki
+    //      dukaan") that didn't trip hydrate's looksRich gate, AND the LLM
+    //      triggered the demo without filling the name in the tag.
+    // Heuristic message-scanning is gone — it used to pick arbitrary phrases
+    // like "do what you think is goo" as business names.
+    const wd = user.metadata?.websiteData || {};
+
+    let businessName =
+      websiteDemoBusinessName ||
+      wd.businessName ||
+      user.metadata?.adData?.businessName ||
+      user.metadata?.logoData?.businessName ||
+      user.metadata?.chatbotData?.businessName ||
+      null;
+
+    const industry = websiteDemoIndustry || wd.industry || null;
+
+    const services =
+      (websiteDemoServices && websiteDemoServices.length ? websiteDemoServices : null) ||
+      (Array.isArray(wd.services) && wd.services.length ? wd.services : null);
+
+    // Rescue: one cheap LLM call to pull the business name out of recent
+    // turns before giving up and re-asking. The user almost always said it
+    // earlier; we just couldn't cheaply regex it out.
+    if (!businessName) {
+      try {
+        const convo = messages
+          .slice(-10)
+          .map((m) => `${m.role}: ${m.content}`)
+          .join('\n');
+        const rescue = await generateResponse(
+          `Extract the business name the user mentioned in this short conversation. Return ONLY the business name as plain text — no quotes, no punctuation, no "the business name is". If the user has NOT mentioned a business name yet, return exactly: unknown.\n\n${convo}`,
+          [{ role: 'user', content: '[extract business name]' }],
+          { userId: user.id, operation: 'webdev_trigger_name_rescue' }
+        );
+        const clean = (rescue || '').trim().replace(/^["']|["']$/g, '');
+        if (clean && clean.length > 1 && clean.length < 60 && !/^unknown$/i.test(clean)) {
+          businessName = clean;
+          logger.info(`[SALES] Rescued business name from conversation: "${businessName}"`);
+        }
+      } catch (err) {
+        logger.warn(`[SALES] Business-name rescue failed: ${err.message}`);
+      }
+    }
+
+    if (!businessName) {
+      await sendTextMessage(
+        user.phone_number,
+        await localize("Let's build it! What's your business name?", user, text)
+      );
+      await logMessage(user.id, 'Starting website demo flow', 'assistant');
+      return STATES.WEB_COLLECT_NAME;
+    }
+
+    // Pre-seed every field we resolved so the wizard doesn't re-ask for
+    // things the LLM already heard.
+    businessName = normalizeBusinessName(businessName);
+    const websiteData = { ...wd, businessName };
+    if (industry) {
+      websiteData.industry = industry;
+      websiteData.industryKey = await classifyIndustry(industry);
+    }
+    if (services) websiteData.services = services;
+    await updateUserMetadata(user.id, { websiteData });
+    user.metadata = { ...(user.metadata || {}), websiteData };
+
+    const hasContact = !!(websiteData.contactEmail || websiteData.contactPhone || websiteData.contactAddress);
+
+    logger.info(
+      `[SALES] Website demo pre-seeded: name="${businessName}", industry="${industry || '(ask)'}", services=${
+        services ? `[${services.join(', ')}]` : '(ask)'
+      }, hasContact=${hasContact}`
+    );
+
+    const {
+      isSalonIndustry,
+      startSalonFlow,
+      showConfirmSummary,
+      nextMissingWebDevState,
+      questionForState,
+    } = require('./webDev');
+
+    // Salon industry has its own sub-flow (booking tool / hours / prices /
+    // instagram) that isn't covered by nextMissingWebDevState's generic
+    // ladder. Route to startSalonFlow so those questions get asked.
+    //
+    // Detection falls back to the BUSINESS NAME when the LLM-extracted
+    // industry is missing OR also matches the salon regex. We do NOT
+    // override a clear, non-salon industry on the strength of a name
+    // alone — names like "Hair Plus Tech" (software), "BeautyOS" (SaaS),
+    // or "BarberShop Analytics" (data co) would otherwise be misrouted
+    // into the salon flow even when the LLM correctly extracted
+    // industry="Software" / "SaaS" / etc. The original use case for
+    // by-name detection was sparse messages where the LLM emitted no
+    // industry at all (or an ambiguous label like "Personal Care") —
+    // those cases still hit name-based detection because `industry` is
+    // null/empty there.
+    const salonByName = isSalonIndustry(websiteData.businessName);
+    const salonByIndustry = industry && isSalonIndustry(industry, websiteData.industryKey);
+    const industryUnsetOrSalon = !industry || salonByIndustry;
+    if (salonByIndustry || (salonByName && industryUnsetOrSalon)) {
+      // Services must be collected BEFORE entering the salon sub-flow.
+      // The salon flow's hours step assumes a services list exists, and
+      // when missing it silently skips SALON_SERVICE_DURATIONS via
+      // finishSalonFlow — shipping a salon site with no services page.
+      // The normal ladder (handleCollectServices) calls startSalonFlow
+      // itself once services are saved, so detouring through
+      // WEB_COLLECT_SERVICES here is the same path users take when they
+      // answer industry first and services next.
+      const haveServices = Array.isArray(services) && services.length > 0;
+      if (!haveServices) {
+        // Fork into the services-form offer for salon. The offer body
+        // already includes the question ("Quick choice — easier in chat
+        // or in a quick form? …"), so we pass the friendly ack as a
+        // prefix and the helper sends one combined message instead of two.
+        // offerServicesForm is internal-fallback-safe — if PUBLIC_API_BASE_URL
+        // is missing or token creation fails, it sends the bare chat question
+        // itself, so no outer fallback is needed.
+        const { offerServicesForm } = require('./webDev');
+        const ack = await dynamicPhrase(
+          `Nice, *${businessName}* — let's get you set up.`,
+          user,
+          text,
+          { intent: `Acknowledge that we're starting to build for ${businessName} (a salon) before showing the services-form offer` }
+        );
+        await logMessage(user.id, 'Website demo → salon flow (form offer)', 'assistant');
+        return offerServicesForm(user, 'salon', { prefixAck: ack });
+      }
+      await sendTextMessage(
+        user.phone_number,
+        await dynamicPhrase(
+          `Nice, let's get *${businessName}* set up. Just a couple more things to personalize your site.`,
+          user,
+          text,
+          { intent: `Acknowledge we're starting to build for the salon ${businessName}, and warn there are a few personalization questions coming` }
+        )
+      );
+      await logMessage(user.id, `Website demo → salon flow (name + industry pre-filled)`, 'assistant');
+      return startSalonFlow(user);
+    }
+
+    // Ask the wizard what field is actually missing next. This handles the
+    // per-industry nuances automatically — HVAC needs primaryCity + service
+    // areas, real-estate needs agent profile + listings, generic needs
+    // services + contact — all without salesBot having to know.
+    const nextState = nextMissingWebDevState(websiteData, user.metadata || {});
+
+    // Nothing left to collect → straight to the confirmation summary.
+    if (nextState === STATES.WEB_CONFIRM) {
+      await sendTextMessage(
+        user.phone_number,
+        await dynamicPhrase(
+          `Perfect, I've got everything I need for *${businessName}*. Pulling up the summary.`,
+          user,
+          text,
+          { intent: `Confirm we have all info for ${businessName} and announce we're showing the summary next` }
+        )
+      );
+      await logMessage(user.id, `Website demo → confirm (all pre-filled from sales chat)`, 'assistant');
+      return showConfirmSummary(user);
+    }
+
+    // Build an ack that lists what we already captured so the user sees
+    // the question in context, then send the next question for the state
+    // the wizard wants us to land on.
+    const ackParts = [];
+    if (industry) ackParts.push(industry);
+    if (services && services.length) {
+      ackParts.push(`services: ${services.slice(0, 4).join(', ')}${services.length > 4 ? '…' : ''}`);
+    }
+    if (hasContact) ackParts.push('contact saved');
+    const contextLine = ackParts.length
+      ? `Building *${businessName}* (${ackParts.join(', ')}).`
+      : `Building it for *${businessName}*.`;
+
+    const question = questionForState(nextState, websiteData);
+    const outgoing = `${contextLine}\n\n${question}`;
+    await sendTextMessage(
+      user.phone_number,
+      await dynamicPhrase(outgoing, user, text, {
+        intent: `Acknowledge what we already know about ${businessName} and ask the next wizard question`,
+      })
+    );
+    await logMessage(
+      user.id,
+      `Website demo → ${nextState} (pre-filled: name${industry ? ', industry' : ''}${services ? ', services' : ''}${hasContact ? ', contact' : ''})`,
+      'assistant'
+    );
+    return nextState;
+  }
+
+  // Trigger ad generator flow
+  if (adGeneratorTrigger && !user.metadata?.adGeneratorTriggered) {
+    logger.info(`[SALES] Triggering ad generator for ${user.phone_number}`);
+    await updateUserMetadata(user.id, { adGeneratorTriggered: true, returnToSales: true });
+
+    // Look for a previously-used business name from any other flow as a SUGGESTION only.
+    // Do NOT auto-fill — ask the user to confirm or override, since they may be designing
+    // for a different brand than last time.
+    const lastUsedName = user.metadata?.adData?.businessName
+      || user.metadata?.logoData?.businessName
+      || user.metadata?.websiteData?.businessName
+      || user.metadata?.chatbotData?.businessName
+      || null;
+
+    const { updateUserState } = require('../../db/users');
+
+    // Always start at AD_COLLECT_BUSINESS — the handler will check for `suggestedBusinessName`
+    // in metadata and treat short confirmations like "yes/same/sure" as approval.
+    await updateUserMetadata(user.id, {
+      adData: {
+        businessName: null,
+        suggestedBusinessName: lastUsedName, // hint for the handler
+        industry: null,
+        niche: null,
+        productType: null,
+        slogan: null,
+        pricing: null,
+        brandColors: null,
+        imageBase64: null,
+        ideas: null,
+        selectedIdeaIndex: null,
+      },
+    });
+    await updateUserState(user.id, STATES.AD_COLLECT_BUSINESS);
+
+    if (lastUsedName) {
+      await sendTextMessage(
+        user.phone_number,
+        `🎨 Let's design your marketing ad!\n\n*Which business is this ad for?*\n\n_Last time you worked with me on **${lastUsedName}** — reply *same* to design for that brand again, or just type a different business name._`
+      );
+      await logMessage(user.id, `Ad generator: asked for business confirmation (suggested: "${lastUsedName}")`, 'assistant');
+    } else {
+      await sendTextMessage(
+        user.phone_number,
+        "🎨 Let's design your marketing ad!\n\nWhat's your *business name*?"
+      );
+      await logMessage(user.id, 'Starting ad generator flow from sales', 'assistant');
+    }
+
+    return STATES.AD_COLLECT_BUSINESS;
+  }
+
+  // Trigger logo maker flow
+  if (logoMakerTrigger && !user.metadata?.logoMakerTriggered) {
+    logger.info(`[SALES] Triggering logo maker for ${user.phone_number}`);
+    await updateUserMetadata(user.id, { logoMakerTriggered: true, returnToSales: true });
+
+    // Look for a previously-used business name from any other flow as a SUGGESTION only.
+    // Do NOT auto-fill — ask the user to confirm or override, since they may be designing
+    // for a different brand than last time.
+    const lastUsedName = user.metadata?.logoData?.businessName
+      || user.metadata?.adData?.businessName
+      || user.metadata?.websiteData?.businessName
+      || user.metadata?.chatbotData?.businessName
+      || null;
+
+    const { updateUserState } = require('../../db/users');
+
+    // Always start at LOGO_COLLECT_BUSINESS — the handler will check for `suggestedBusinessName`
+    // in metadata and treat short confirmations like "yes/same/sure" as approval.
+    await updateUserMetadata(user.id, {
+      logoData: {
+        businessName: null,
+        suggestedBusinessName: lastUsedName, // hint for the handler
+        industry: null,
+        description: null,
+        style: null,
+        brandColors: null,
+        symbolIdea: null,
+        background: null,
+        ideas: null,
+        selectedIdeaIndex: null,
+      },
+    });
+    await updateUserState(user.id, STATES.LOGO_COLLECT_BUSINESS);
+
+    if (lastUsedName) {
+      await sendTextMessage(
+        user.phone_number,
+        `✨ Let's design your logo!\n\n*Which business is this logo for?*\n\n_Last time you worked with me on **${lastUsedName}** — reply *same* to design for that brand again, or just type a different business name._\n\n_(This will be the actual text on your logo)_`
+      );
+      await logMessage(user.id, `Logo maker: asked for business confirmation (suggested: "${lastUsedName}")`, 'assistant');
+    } else {
+      await sendTextMessage(
+        user.phone_number,
+        "✨ Let's design your logo! What's your *business name*?\n\n_(This will be the actual text on your logo, so spell it exactly as you want it to appear)_"
+      );
+      await logMessage(user.id, 'Starting logo maker flow from sales', 'assistant');
+    }
+
+    return STATES.LOGO_COLLECT_BUSINESS;
+  }
+
+  // Trigger SEO audit flow
+  const seoUrl = seoAuditMatch ? seoAuditMatch[1].trim() : seoAuditFallbackUrl;
+  if (seoUrl && !user.metadata?.seoAuditTriggered) {
+    // SEO disabled → handoff. (The earlier handoff block already catches
+    // an explicit [TRIGGER_SEO_AUDIT] tag; this guards the fallback path
+    // where we infer SEO intent from a bare URL + SEO keyword in the
+    // bot's own reply.)
+    if (!isServiceEnabled('seo')) {
+      return handoffToHuman(user, { serviceKey: 'seo', reason: 'service_not_chat_handled' });
+    }
+    const url = seoUrl;
+    logger.info(`Triggering SEO audit for ${user.phone_number}: ${url}`);
+    await updateUserMetadata(user.id, { seoAuditTriggered: true, returnToSales: true });
+
+    // Set user state so the SEO handler processes it correctly
+    const { updateUserState } = require('../../db/users');
+    await updateUserState(user.id, STATES.SEO_COLLECT_URL);
+    user = { ...user, state: STATES.SEO_COLLECT_URL };
+
+    // Feed the URL directly into the SEO handler
+    const { handleSeoAudit } = require('./seoAudit');
+    return handleSeoAudit(user, { ...message, text: url, type: 'text' });
+  }
+
+  return STATES.SALES_CHAT;
+}
+
+module.exports = { handleSalesBot, getSampleScreenshotUrl };

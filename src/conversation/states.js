@@ -1,0 +1,156 @@
+// Conversation state constants
+const STATES = {
+  // Entry states
+  WELCOME: 'WELCOME',
+  SERVICE_SELECTION: 'SERVICE_SELECTION',
+
+  // SEO Audit flow
+  SEO_COLLECT_URL: 'SEO_COLLECT_URL',
+  SEO_ANALYZING: 'SEO_ANALYZING',
+  SEO_RESULTS: 'SEO_RESULTS',
+  SEO_FOLLOW_UP: 'SEO_FOLLOW_UP',
+
+  // Web Development flow
+  WEB_COLLECT_NAME: 'WEB_COLLECT_NAME',
+  WEB_COLLECT_EMAIL: 'WEB_COLLECT_EMAIL',
+  WEB_COLLECT_INDUSTRY: 'WEB_COLLECT_INDUSTRY',
+  // HVAC-specific: collect primary city + service areas in one step
+  WEB_COLLECT_AREAS: 'WEB_COLLECT_AREAS',
+  // Real-estate-specific: brokerage, years, designations in one step
+  WEB_COLLECT_AGENT_PROFILE: 'WEB_COLLECT_AGENT_PROFILE',
+  // Real-estate-specific: site-wide currency for listing prices (asked once,
+  // upfront — parallel to salon's SALON_CURRENCY). Defaults per-listing currency.
+  WEB_COLLECT_LISTINGS_CURRENCY: 'WEB_COLLECT_LISTINGS_CURRENCY',
+  // Real-estate-specific: optional featured listings (max 3) + optional photos
+  WEB_COLLECT_LISTINGS_ASK: 'WEB_COLLECT_LISTINGS_ASK',
+  WEB_COLLECT_LISTINGS_DETAILS: 'WEB_COLLECT_LISTINGS_DETAILS',
+  WEB_COLLECT_LISTINGS_PHOTOS: 'WEB_COLLECT_LISTINGS_PHOTOS',
+  WEB_COLLECT_SERVICES: 'WEB_COLLECT_SERVICES',
+  WEB_COLLECT_COLORS: 'WEB_COLLECT_COLORS',
+  WEB_COLLECT_LOGO: 'WEB_COLLECT_LOGO',
+  WEB_COLLECT_CONTACT: 'WEB_COLLECT_CONTACT',
+  // Salon-specific collection (only entered when industry matches salon/beauty/barber/spa/nail)
+  SALON_CURRENCY: 'SALON_CURRENCY',
+  SALON_BOOKING_TOOL: 'SALON_BOOKING_TOOL',
+  SALON_HOURS: 'SALON_HOURS',
+  SALON_SERVICE_DURATIONS: 'SALON_SERVICE_DURATIONS',
+  // CRM-style services form: bot has handed the user a web form link
+  // for salon services or real-estate listings and is waiting for the
+  // submission. Form POST advances state past the loop in one shot.
+  WEB_AWAITING_FORM: 'WEB_AWAITING_FORM',
+  // Portfolio-specific collection (designer / developer / photographer / writer
+  // / freelancer / artist — anyone showcasing work). About paragraph + 3-phase
+  // iterative project collection (parallel to real-estate listings).
+  // Creative niche (photographer/designer/developer/writer) — asked first so it
+  // picks the sub-template + drives niche-appropriate hero/project images.
+  WEB_COLLECT_PORTFOLIO_NICHE: 'WEB_COLLECT_PORTFOLIO_NICHE',
+  WEB_COLLECT_ABOUT: 'WEB_COLLECT_ABOUT',
+  // Skills/tools (→ tech ribbon + skills grid) and profile links + years +
+  // current focus (→ social CTAs, GitHub section, stats, hero meta). Both
+  // optional/skippable — sensible placeholders fill any blanks.
+  WEB_COLLECT_PORTFOLIO_SKILLS: 'WEB_COLLECT_PORTFOLIO_SKILLS',
+  WEB_COLLECT_PORTFOLIO_PROFILE: 'WEB_COLLECT_PORTFOLIO_PROFILE',
+  WEB_COLLECT_PROJECTS_ASK: 'WEB_COLLECT_PROJECTS_ASK',
+  WEB_COLLECT_PROJECTS_DETAILS: 'WEB_COLLECT_PROJECTS_DETAILS',
+  WEB_COLLECT_PROJECTS_PHOTOS: 'WEB_COLLECT_PROJECTS_PHOTOS',
+  // Domain choice happens BEFORE preview now — combined Stripe link at generation.
+  WEB_DOMAIN_CHOICE: 'WEB_DOMAIN_CHOICE',
+  WEB_DOMAIN_OWN_INPUT: 'WEB_DOMAIN_OWN_INPUT',
+  // Own-domain branch — after the user gives us their domain, ask which
+  // registrar they bought it from so we can send registrar-specific DNS
+  // setup steps post-payment.
+  WEB_DOMAIN_OWN_REGISTRAR: 'WEB_DOMAIN_OWN_REGISTRAR',
+  WEB_DOMAIN_SEARCH: 'WEB_DOMAIN_SEARCH',
+  // Same domain-search UX, but entered AFTER the site is already live —
+  // user originally skipped or didn't select a domain, then changed their
+  // mind. Picking a domain here either supersedes the existing pending
+  // payment (pre-paid scenario: new combined link) or creates a separate
+  // domain-add-on charge (already-paid scenario: $domain only).
+  WEB_DOMAIN_LATE_SEARCH: 'WEB_DOMAIN_LATE_SEARCH',
+  WEB_CONFIRM: 'WEB_CONFIRM',
+  WEB_GENERATING: 'WEB_GENERATING',
+  WEB_GENERATION_FAILED: 'WEB_GENERATION_FAILED',
+  WEB_PREVIEW: 'WEB_PREVIEW',
+  WEB_REVISIONS: 'WEB_REVISIONS',
+
+  // Legacy custom domain flow (post-approval). Kept as aliases so in-flight
+  // users don't get stuck. New flow uses WEB_DOMAIN_* states above.
+  DOMAIN_OFFER: 'DOMAIN_OFFER',
+  DOMAIN_SEARCH: 'DOMAIN_SEARCH',
+  DOMAIN_PURCHASE_WAIT: 'DOMAIN_PURCHASE_WAIT',
+  DOMAIN_DNS_GUIDE: 'DOMAIN_DNS_GUIDE',
+  DOMAIN_VERIFY: 'DOMAIN_VERIFY',
+
+  // App Development flow
+  APP_COLLECT_REQUIREMENTS: 'APP_COLLECT_REQUIREMENTS',
+  APP_PROPOSAL: 'APP_PROPOSAL',
+  APP_FOLLOW_UP: 'APP_FOLLOW_UP',
+
+  // Marketing flow
+  MARKETING_COLLECT_DETAILS: 'MARKETING_COLLECT_DETAILS',
+  MARKETING_STRATEGY: 'MARKETING_STRATEGY',
+  MARKETING_FOLLOW_UP: 'MARKETING_FOLLOW_UP',
+
+  // General
+  GENERAL_CHAT: 'GENERAL_CHAT',
+
+  // Informative / FAQ bot
+  INFORMATIVE_CHAT: 'INFORMATIVE_CHAT',
+
+  // Sales bot (Bytes Platform v2)
+  SALES_CHAT: 'SALES_CHAT',
+
+  // Meeting scheduling flow
+  SCHEDULE_COLLECT_DATE: 'SCHEDULE_COLLECT_DATE',
+  SCHEDULE_COLLECT_TIME: 'SCHEDULE_COLLECT_TIME',
+  SCHEDULE_CONFIRM: 'SCHEDULE_CONFIRM',
+
+  // AI Chatbot SaaS flow
+  CB_COLLECT_NAME: 'CB_COLLECT_NAME',
+  CB_COLLECT_INDUSTRY: 'CB_COLLECT_INDUSTRY',
+  CB_COLLECT_FAQS: 'CB_COLLECT_FAQS',
+  CB_COLLECT_SERVICES: 'CB_COLLECT_SERVICES',
+  CB_COLLECT_HOURS: 'CB_COLLECT_HOURS',
+  CB_COLLECT_LOCATION: 'CB_COLLECT_LOCATION',
+  CB_GENERATING: 'CB_GENERATING',
+  CB_DEMO_SENT: 'CB_DEMO_SENT',
+  CB_FOLLOW_UP: 'CB_FOLLOW_UP',
+
+  // Marketing Ad Generation flow (Design-Automation-V2 integration)
+  AD_COLLECT_BUSINESS: 'AD_COLLECT_BUSINESS',
+  AD_COLLECT_INDUSTRY: 'AD_COLLECT_INDUSTRY',
+  AD_COLLECT_NICHE: 'AD_COLLECT_NICHE',
+  AD_COLLECT_TYPE: 'AD_COLLECT_TYPE',
+  AD_COLLECT_SLOGAN: 'AD_COLLECT_SLOGAN',
+  AD_COLLECT_PRICING: 'AD_COLLECT_PRICING',
+  AD_COLLECT_COLORS: 'AD_COLLECT_COLORS',
+  AD_COLLECT_IMAGE: 'AD_COLLECT_IMAGE',
+  AD_SELECT_IDEA: 'AD_SELECT_IDEA',
+  AD_CREATING_IMAGE: 'AD_CREATING_IMAGE',
+  AD_RESULTS: 'AD_RESULTS',
+
+  // Logo Generation flow
+  LOGO_COLLECT_BUSINESS: 'LOGO_COLLECT_BUSINESS',
+  LOGO_COLLECT_INDUSTRY: 'LOGO_COLLECT_INDUSTRY',
+  LOGO_COLLECT_DESCRIPTION: 'LOGO_COLLECT_DESCRIPTION',
+  LOGO_COLLECT_STYLE: 'LOGO_COLLECT_STYLE',
+  LOGO_COLLECT_COLORS: 'LOGO_COLLECT_COLORS',
+  LOGO_COLLECT_SYMBOL: 'LOGO_COLLECT_SYMBOL',
+  LOGO_COLLECT_BACKGROUND: 'LOGO_COLLECT_BACKGROUND',
+  LOGO_SELECT_IDEA: 'LOGO_SELECT_IDEA',
+  LOGO_CREATING_IMAGE: 'LOGO_CREATING_IMAGE',
+  LOGO_RESULTS: 'LOGO_RESULTS',
+};
+
+// Service button IDs used in interactive messages
+const SERVICE_IDS = {
+  SEO_AUDIT: 'svc_seo',
+  WEB_DEV: 'svc_webdev',
+  APP_DEV: 'svc_appdev',
+  MARKETING: 'svc_marketing',
+  GENERAL: 'svc_general',
+  INFORMATIVE: 'svc_info',
+  CHATBOT: 'svc_chatbot',
+};
+
+module.exports = { STATES, SERVICE_IDS };

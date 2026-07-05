@@ -1,0 +1,197 @@
+/**
+ * Channel-aware sender facade.
+ *
+ * All handlers import from this file (unchanged). It reads the current
+ * channel from AsyncLocalStorage and delegates to the correct platform sender.
+ */
+
+const { getCurrentChannel, noteSendSucceeded, getUserId, getVoiceMode } = require('./channelContext');
+const whatsappSender = require('./whatsappSender');
+const messengerSender = require('./messengerSender');
+const { rememberInteractive, maybeAppendHint } = require('./interactiveReplyMatcher');
+const { logger } = require('../utils/logger');
+
+function getSender() {
+  const channel = getCurrentChannel();
+  return channel === 'whatsapp' ? whatsappSender : messengerSender;
+}
+
+/**
+ * Pull the platform message id out of a send-result. Both WhatsApp and
+ * Messenger return it but in different shapes:
+ *   - WhatsApp Cloud API: { messages: [{ id: 'wamid.xxx' }] }
+ *   - Messenger / Instagram: { recipient_id, message_id }
+ * We persist it on the outbound conversations row so a future inbound
+ * reply (which carries `context.id` / `reply_to.mid`) can be resolved
+ * back to the bot message it points at.
+ */
+function extractPlatformMessageId(result) {
+  if (!result) return null;
+  return result?.messages?.[0]?.id || result?.message_id || null;
+}
+
+/**
+ * Auto-log an outbound bot message against the current turn's user.
+ * No-op when there's no userId in context (background jobs, admin-
+ * initiated sends that already log manually). Errors are swallowed
+ * so a DB hiccup never fails a send.
+ */
+async function autoLogOutbound(text, messageType = 'text', platformMessageId = null, mediaData = null, mediaMime = null) {
+  const userId = getUserId();
+  if (!userId || !text) return;
+  try {
+    const { logMessage } = require('../db/conversations');
+    await logMessage(userId, text, 'assistant', messageType, platformMessageId, mediaData, mediaMime);
+  } catch (err) {
+    logger.debug(`[SENDER] Auto-log failed: ${err.message}`);
+  }
+}
+
+async function sendTextMessage(to, text, options = {}) {
+  // We used to show a typing indicator + sleep 2-4s before every reply
+  // to feel "human", but the latency made the bot feel slow on simple
+  // questions and stacked badly when a turn produced multiple sends.
+  // Replies now go out as soon as the LLM result is ready. The
+  // `options.instant` flag is kept as a no-op so existing call sites
+  // (admin operator sends) don't need to change.
+  void options;
+
+  // Voice-reply mode (sticky, set per-turn from user.metadata.voiceReplies):
+  // speak this plain-text reply as a voice note INSTEAD of sending text.
+  // This is the one chokepoint every handler funnels through, so the feature
+  // works across all flows without per-handler wiring. Only plain text is
+  // converted — interactive buttons/lists/CTA, images and documents below
+  // render normally (buttons must stay actionable). The conversations row is
+  // still logged with the text content (type 'audio') so the LLM history and
+  // admin transcript keep the words. On ANY synthesis/upload failure we fall
+  // back to sending the text so the conversation never dies.
+  if (text && getVoiceMode()) {
+    try {
+      const { synthesizeSpeech } = require('../llm/tts');
+      const { buffer, mimeType } = await synthesizeSpeech(text);
+      const result = await getSender().sendAudioBuffer(to, buffer, mimeType);
+      noteSendSucceeded();
+      autoLogOutbound(text, 'audio', extractPlatformMessageId(result), null, mimeType).catch(() => {});
+      return result;
+    } catch (err) {
+      logger.warn(`[VOICE] voice send failed, falling back to text: ${err.message}`);
+      // fall through to the normal text send below
+    }
+  }
+
+  const result = await getSender().sendTextMessage(to, text);
+  noteSendSucceeded();
+  autoLogOutbound(text, 'text', extractPlatformMessageId(result)).catch(() => {});
+  return result;
+}
+
+async function sendInteractiveButtons(to, bodyText, buttons, headerText = null) {
+  // Phase 10: append a "Or type 1, 2, 3" hint and remember this button set
+  // so the next inbound text reply can be matched back to a button — lets
+  // users who prefer typing (or whose client doesn't render buttons as
+  // interactive) still pick an option without the bot fumbling.
+  const bodyWithHint = await maybeAppendHint(bodyText, buttons);
+  const result = await getSender().sendInteractiveButtons(to, bodyWithHint, buttons, headerText);
+  noteSendSucceeded();
+  const btnLabels = (buttons || []).map((b) => b?.title || b?.text || '').filter(Boolean).join(' | ');
+  autoLogOutbound(btnLabels ? `${bodyWithHint}\n[Buttons: ${btnLabels}]` : bodyWithHint, 'text', extractPlatformMessageId(result)).catch(() => {});
+  try { rememberInteractive(to, buttons, 'buttons'); } catch {}
+  return result;
+}
+
+async function sendInteractiveList(to, bodyText, buttonText, sections, headerText = null) {
+  // Flatten all rows across sections into one id/title list so the matcher
+  // can treat a list the same way as buttons for the "type a number" path.
+  const flatRows = Array.isArray(sections)
+    ? sections.flatMap((s) => Array.isArray(s?.rows) ? s.rows : [])
+    : [];
+  const bodyWithHint = await maybeAppendHint(bodyText, flatRows);
+  const result = await getSender().sendInteractiveList(to, bodyWithHint, buttonText, sections, headerText);
+  noteSendSucceeded();
+  const rowLabels = flatRows.map((r) => r?.title || '').filter(Boolean).join(' | ');
+  autoLogOutbound(rowLabels ? `${bodyWithHint}\n[List: ${rowLabels}]` : bodyWithHint, 'text', extractPlatformMessageId(result)).catch(() => {});
+  try { rememberInteractive(to, flatRows, 'list'); } catch {}
+  return result;
+}
+
+async function sendWithMenuButton(to, text, extraButtons = []) {
+  const result = await getSender().sendWithMenuButton(to, text, extraButtons);
+  noteSendSucceeded();
+  autoLogOutbound(text, 'text', extractPlatformMessageId(result)).catch(() => {});
+  return result;
+}
+
+async function sendCTAButton(to, bodyText, buttonText, url, headerText = null) {
+  const result = await getSender().sendCTAButton(to, bodyText, buttonText, url, headerText);
+  noteSendSucceeded();
+  autoLogOutbound(`${bodyText}\n[CTA: ${buttonText} → ${url}]`, 'text', extractPlatformMessageId(result)).catch(() => {});
+  return result;
+}
+
+async function sendDocument(to, documentUrl, caption = '', filename = 'report.pdf') {
+  const result = await getSender().sendDocument(to, documentUrl, caption, filename);
+  noteSendSucceeded();
+  autoLogOutbound(`[Document: ${filename}]${caption ? ` — ${caption}` : ''}`, 'document', extractPlatformMessageId(result)).catch(() => {});
+  return result;
+}
+
+async function sendDocumentBuffer(to, buffer, caption = '', filename = 'report.pdf', mimeType = 'application/pdf') {
+  const result = await getSender().sendDocumentBuffer(to, buffer, caption, filename, mimeType);
+  noteSendSucceeded();
+  autoLogOutbound(`[Document: ${filename}]${caption ? ` — ${caption}` : ''}`, 'document', extractPlatformMessageId(result)).catch(() => {});
+  return result;
+}
+
+async function sendAudioMessage(to, audioUrl) {
+  const result = await getSender().sendAudioMessage(to, audioUrl);
+  noteSendSucceeded();
+  autoLogOutbound('[Voice note]', 'audio', extractPlatformMessageId(result), audioUrl, 'audio/ogg').catch(() => {});
+  return result;
+}
+
+async function sendAudioBuffer(to, buffer, mimeType = 'audio/ogg') {
+  const result = await getSender().sendAudioBuffer(to, buffer, mimeType);
+  noteSendSucceeded();
+  autoLogOutbound('[Voice note]', 'audio', extractPlatformMessageId(result), null, mimeType).catch(() => {});
+  return result;
+}
+
+async function sendImage(to, imageUrl, caption = '') {
+  const result = await getSender().sendImage(to, imageUrl, caption);
+  noteSendSucceeded();
+  autoLogOutbound(caption || '[Image]', 'image', extractPlatformMessageId(result), imageUrl, 'image/jpeg').catch(() => {});
+  return result;
+}
+
+async function markAsRead(messageId) {
+  return getSender().markAsRead(messageId);
+}
+
+async function downloadMedia(mediaIdOrUrl) {
+  return getSender().downloadMedia(mediaIdOrUrl);
+}
+
+async function showTyping(to) {
+  return getSender().showTyping(to);
+}
+
+function setLastMessageId(phoneNumber, messageId) {
+  return getSender().setLastMessageId(phoneNumber, messageId);
+}
+
+module.exports = {
+  sendTextMessage,
+  sendInteractiveButtons,
+  sendInteractiveList,
+  sendWithMenuButton,
+  sendCTAButton,
+  sendDocument,
+  sendDocumentBuffer,
+  sendImage,
+  sendAudioMessage,
+  sendAudioBuffer,
+  markAsRead,
+  downloadMedia,
+  showTyping,
+  setLastMessageId,
+};

@@ -1,0 +1,59 @@
+import type { Metadata } from 'next';
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
+import './globals.css';
+
+const sans = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+});
+
+const display = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
+  weight: ['500', '600', '700', '800'],
+});
+
+export const metadata: Metadata = {
+  metadataBase: new URL('https://www.pixiebot.co'),
+  title: 'Pixie — Your website, built by a WhatsApp chat',
+  description:
+    'Text our WhatsApp bot. Get a live website, AI-generated ads, or a free SEO audit in under 60 seconds. No coding, no designer, no meetings.',
+  keywords: [
+    'WhatsApp bot',
+    'AI website builder',
+    'marketing ads',
+    'SEO audit',
+    'WhatsApp automation',
+    'Pixie',
+  ],
+  openGraph: {
+    title: 'Your website, built by a WhatsApp chat',
+    description:
+      'Text our AI bot on WhatsApp and get a live website in 60 seconds. No signup, no code.',
+    type: 'website',
+    siteName: 'Pixie',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Your website, built by a WhatsApp chat',
+    description: 'Text our AI bot on WhatsApp and get a live website in 60 seconds.',
+  },
+  robots: { index: true, follow: true },
+  verification: {
+    google: 'D3A1sh81ZRNd3LfTWNt5amVwgqR7MNyLZZZfC3RGU_c',
+  },
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={`${sans.variable} ${display.variable}`} suppressHydrationWarning>
+      <body className="min-h-screen bg-white text-ink-900 antialiased">
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  );
+}
